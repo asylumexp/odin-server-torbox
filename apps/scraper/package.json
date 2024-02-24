@@ -1,0 +1,9 @@
+{
+  "name": "scraper",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "watchexec -r -e go -- go run main.go",
+    "build": "CGO_ENABLED=0 go build"
+  }
+}

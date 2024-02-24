@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "apps/scraper"
+		},
+		{
+			"path": "apps/backend"
+		},
+		{
+			"path": "apps/frontend"
+		}
+	],
+	"settings": {}
+}
