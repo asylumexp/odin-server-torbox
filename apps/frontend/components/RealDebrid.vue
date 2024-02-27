@@ -25,7 +25,7 @@
 	let profile: null | any = null
 
 	try {
-		profile = await usePb().send('/realdebrid/user', { method: 'get' })
+		profile = await usePb().send('/_realdebrid/user', { method: 'get' })
 	} catch (e) {
 		console.log(e)
 	}

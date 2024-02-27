@@ -22,12 +22,16 @@ import (
 	"github.com/pocketbase/pocketbase/tools/cron"
 )
 
+func getDevice(app *pocketbase.PocketBase, c echo.Context) (*models.Record, error) {
+	device := c.Request().Header.Get("Device")
+	return app.Dao().FindRecordById("devices", device)
+}
+
 func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			record, _ := c.Get("authRecord").(*models.Record)
-			device := c.Request().Header.Get("Device")
-			d, _ := app.Dao().FindFirstRecordByData("devices", "token", device)
+			d, _ := getDevice(app, c)
 			verified := false
 			if d != nil {
 				verified = d.GetBool("verified")
@@ -66,6 +70,7 @@ func main() {
 
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
 		e.Router.POST("/scrape", func(c echo.Context) error {
+			log.Debug("Scraping")
 			data := scraper.GetLinks(apis.RequestInfo(c).Data, app)
 			return c.JSON(http.StatusOK, data)
 		}, RequireDeviceOrRecordAuth(app))
@@ -74,12 +79,26 @@ func main() {
 			return c.JSON(http.StatusOK, map[string]any{"test": "ok"})
 		})
 
+		e.Router.GET("/device/verify/:id", func(c echo.Context) error {
+			// id := c.PathParam("id")
+			// d, _ := app.Dao().FindRecordById("devices", id)
+			// if d != nil {
+			// 	d.Set("verified", true)
+			// 	d.Save()
+			// 	return c.JSON(http.StatusOK, d)
+			// }
+			return c.JSON(http.StatusNotFound, nil)
+		})
+
+		e.Router.GET("/sections/", func(c echo.Context) error {
+			return c.String(http.StatusOK, "Hello, World!")
+		}, RequireDeviceOrRecordAuth(app))
+
 		e.Router.Any("/_trakt/*", func(c echo.Context) error {
 			info := apis.RequestInfo(c)
 			id := ""
 			if info.AuthRecord == nil {
-				d, _ := app.Dao().
-					FindFirstRecordByData("devices", "token", c.Request().Header.Get("Device"))
+				d, _ := getDevice(app, c)
 				if d != nil {
 					id = d.Get("user").(string)
 				}
@@ -122,12 +141,12 @@ func main() {
 				c.Response().Header().Add(k, v[0])
 			}
 			c.Response().Status = status
+
 			return c.JSON(http.StatusOK, result)
 		}, RequireDeviceOrRecordAuth(app))
 
-		e.Router.Any("/realdebrid/*", func(c echo.Context) error {
-			fmt.Println("realdebrid")
-			url := strings.ReplaceAll(c.Request().URL.String(), "/realdebrid", "")
+		e.Router.Any("/_realdebrid/*", func(c echo.Context) error {
+			url := strings.ReplaceAll(c.Request().URL.String(), "/_realdebrid", "")
 			result, headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil, app)
 
 			for k, v := range headers {

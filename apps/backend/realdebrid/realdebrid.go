@@ -167,7 +167,7 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 			mimetype,
 			"video",
 		)
-		match, _ := regexp.MatchString("^Sample[ ]?[0-9].", fname)
+		match, _ := regexp.MatchString("^Sample[ -]?[0-9].", fname)
 		if !match && isVideo {
 			downloads = append(downloads, u.(map[string]any))
 		}

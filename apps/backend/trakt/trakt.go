@@ -17,6 +17,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/tools/types"
+	"github.com/thoas/go-funk"
 
 	"github.com/go-resty/resty/v2"
 
@@ -121,7 +122,7 @@ func SyncHistory(app *pocketbase.PocketBase) {
 		go syncByType(&wg, "episodes", last_watched, app, u.Get("id").(string))
 
 		wg.Wait()
-		log.Info("Done syncing trakt history", "user", u.Get("id").(string))
+		log.Info("Done synching trakt history", "user", u.Get("id"))
 
 	}
 }
@@ -140,10 +141,12 @@ func syncByType(wg *sync.WaitGroup, t string, last_history types.DateTime, app *
 	for i := 1; i <= pages; i++ {
 		wg.Add(1)
 		go func(i int, wg *sync.WaitGroup) {
+
 			defer wg.Done()
 			url += "&page=" + fmt.Sprint(i)
 
 			data, _, _ := CallEndpoint(url, "GET", nil, false, app)
+			log.Debug("Synching trakt history", "type", t, "page", fmt.Sprintf("%d/%d", i, pages), "user", user, "count", len(data.([]any)))
 			for _, o := range data.([]any) {
 
 				record := models.NewRecord(collection)
@@ -159,8 +162,8 @@ func syncByType(wg *sync.WaitGroup, t string, last_history types.DateTime, app *
 				} else if t == "episodes" {
 					record.Set("type", "episode")
 					record.Set("trakt_id", o.(map[string]any)["episode"].(map[string]any)["ids"].(map[string]any)["trakt"])
-					record.Set("show_id", o.(map[string]any)["episode"].(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"])
-					record.Set("data", map[string]any{"genres": o.(map[string]any)["episode"].(map[string]any)["show"].(map[string]any)["genres"]})
+					record.Set("show_id", o.(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"])
+					record.Set("data", map[string]any{"genres": o.(map[string]any)["show"].(map[string]any)["genres"]})
 					record.Set("runtime", o.(map[string]any)["episode"].(map[string]any)["runtime"])
 				}
 				app.Dao().SaveRecord(record)
@@ -276,7 +279,10 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 				}
 				wg.Wait()
 				objmap = GetWatched(objmap.([]any), app)
-				objmap = fixEpisodes(objmap.([]any))
+				if !strings.Contains(endpoint, "sync/history") {
+					objmap = FixEpisodes(objmap)
+
+				}
 				// }
 
 			}
@@ -292,21 +298,38 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 	return objmap, respHeaders, status
 }
 
-func fixEpisodes(objmap []any) []any {
-	for i, o := range objmap {
-		if o.(map[string]any)["episode"] != nil && o.(map[string]any)["show"] != nil {
-			objmap[i].(map[string]any)["episode"].(map[string]any)["show"] = o.(map[string]any)["show"]
-			objmap[i] = map[string]any{"episode": objmap[i].(map[string]any)["episode"]}
-		}
+// fixes calendar episodes
+
+func FixEpisodes(result any) []any {
+	if funk.IsCollection(result) {
+
+		result = funk.Map(result, func(m any) any {
+			var item = ""
+			for _, k := range []string{"episode", "movie", "show"} {
+				if m.(map[string]any)[k] != nil {
+					item = k
+					break
+				}
+			}
+			if item == "" {
+				return m
+			}
+			newM := m.(map[string]any)[item].(map[string]any)
+			newM["type"] = item
+			if item == "episode" {
+				if m.(map[string]any)["show"] != nil && newM["show"] == nil {
+					newM["show"] = m.(map[string]any)["show"]
+				}
+				if newM["show"] != nil {
+					newM["tmdb"] = newM["show"].(map[string]any)["tmdb"]
+				}
+			}
+			return newM
+		})
+
 	}
 
-	newmap := make([]any, 0)
-
-	for _, o := range objmap {
-		newmap = append(newmap, o)
-	}
-
-	return newmap
+	return result.([]any)
 
 }
 
