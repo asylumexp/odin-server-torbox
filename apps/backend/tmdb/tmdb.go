@@ -52,6 +52,7 @@ func PopulateTMDB(k int, wg *sync.WaitGroup, objmap []any, app *pocketbase.Pocke
 	if _, err := request.SetResult(&tmdb).SetHeader("content-type", "application/json").Get(fmt.Sprintf("%s/%s/%d?api_key=%s&append_to_response=credits,videos", TMDB_URL, tmdbResource, id, tmdbKey)); err == nil {
 		log.Debug("tmdb", "resource", resource, "id", id)
 		helpers.WriteTmdbCache(app, id, resource, &tmdb)
+
 		objmap[k].(map[string]any)[resource].(map[string]any)["tmdb"] = tmdb
 		// helpers.WriteTMDBImage(tmdb.(map[string]any)["poster_path"].(string))
 	} else {

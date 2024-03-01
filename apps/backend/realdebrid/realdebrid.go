@@ -1,13 +1,14 @@
 package realdebrid
 
 import (
+	"fmt"
 	"mime"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
-	"backend/helpers"
 	"backend/settings"
 	"backend/types"
 
@@ -15,18 +16,39 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"
+	"github.com/thoas/go-funk"
 )
 
 var Headers = make(map[string]any)
 
-func RemoveTorrents(app *pocketbase.PocketBase) {
-	torrents, _, _ := CallEndpoint("/torrents?limit=300", "GET", nil, app)
-	if torrents == nil {
+func RemoveByType(app *pocketbase.PocketBase, t string) {
+	res, headers, _ := CallEndpoint(fmt.Sprintf("/%s/?limit=1", t), "GET", nil, app)
+	if res == nil {
 		return
 	}
-	for _, v := range torrents.([]any) {
-		CallEndpoint("/torrents/delete/"+v.(map[string]any)["id"].(string), "DELETE", nil, app)
+
+	count := 0
+	if headers.Get("X-Total-Count") != "" {
+		c, err := strconv.Atoi(headers.Get("X-Total-Count"))
+		if err == nil {
+			count = c
+		}
 	}
+
+	for count > 0 {
+		res, _, _ := CallEndpoint(fmt.Sprintf("/%s/?limit=200", t), "GET", nil, app)
+		for _, v := range res.([]any) {
+			CallEndpoint(
+				fmt.Sprintf("/%s/delete/%s", t, v.(map[string]any)["id"].(string)),
+				"DELETE",
+				nil,
+				app,
+			)
+		}
+		count -= 200
+	}
+
+	log.Info("realdebrid cleanup", "type", t, "count", count)
 
 }
 
@@ -45,7 +67,7 @@ func RefreshTokens(app *pocketbase.PocketBase) {
 
 	for k, v := range Headers {
 
-		if helpers.ArrayContains([]string{"Host", "Connection"}, k) {
+		if funk.Contains([]string{"Host", "Connection"}, k) {
 			continue
 		}
 		request.SetHeader(k, v.(string))
@@ -174,4 +196,9 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 	}
 
 	objmap[k].RealDebrid = downloads
+}
+
+func Cleanup(app *pocketbase.PocketBase) {
+	RemoveByType(app, "torrents")
+	RemoveByType(app, "downloads")
 }

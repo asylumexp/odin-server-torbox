@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -20,6 +21,7 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/pocketbase/pocketbase/tools/cron"
+	"github.com/thoas/go-funk"
 )
 
 func getDevice(app *pocketbase.PocketBase, c echo.Context) (*models.Record, error) {
@@ -31,13 +33,19 @@ func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			record, _ := c.Get("authRecord").(*models.Record)
-			d, _ := getDevice(app, c)
-			verified := false
-			if d != nil {
-				verified = d.GetBool("verified")
+			if record == nil {
+				d, _ := getDevice(app, c)
+				if d != nil {
+					if d.GetBool("verified") {
+						u, err := app.Dao().FindRecordById("users", d.Get("user").(string))
+						if err == nil {
+							c.Set("authRecord", u)
+						}
+					}
+				}
 			}
 
-			if !verified && record == nil {
+			if c.Get("authRecord") == nil {
 				return apis.NewBadRequestError("Verified device code or Auth are required", nil)
 			}
 
@@ -47,7 +55,13 @@ func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 }
 
 func main() {
-	log.SetLevel(log.DebugLevel)
+	l, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err == nil {
+		log.SetLevel(l)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+
 	conf := pocketbase.Config{}
 	app := pocketbase.NewWithConfig(conf)
 	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
@@ -66,7 +80,14 @@ func main() {
 
 		})
 
+		// scheduler.MustAdd("daily", "0 0 * * *", func() {
+		// 	realdebrid.Cleanup(app)
+		// })
+
 		scheduler.Start()
+
+		go func() {
+		}()
 
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
 		e.Router.POST("/scrape", func(c echo.Context) error {
@@ -80,31 +101,55 @@ func main() {
 		})
 
 		e.Router.GET("/device/verify/:id", func(c echo.Context) error {
-			// id := c.PathParam("id")
-			// d, _ := app.Dao().FindRecordById("devices", id)
-			// if d != nil {
-			// 	d.Set("verified", true)
-			// 	d.Save()
-			// 	return c.JSON(http.StatusOK, d)
-			// }
+			id := c.PathParam("id")
+			d, err := app.Dao().FindRecordById("devices", id)
+			if err == nil {
+				d.Set("verified", true)
+				app.Dao().SaveRecord(d)
+				log.Info("Device verified", "id", id)
+				return c.JSON(http.StatusOK, d)
+			}
 			return c.JSON(http.StatusNotFound, nil)
-		})
+		}, apis.RequireGuestOnly())
 
 		e.Router.GET("/sections/", func(c echo.Context) error {
 			return c.String(http.StatusOK, "Hello, World!")
 		}, RequireDeviceOrRecordAuth(app))
 
+		e.Router.GET("/user", func(c echo.Context) error {
+			u := c.Get("authRecord")
+			sections := make(map[string]any)
+			err := u.(*models.Record).UnmarshalJSONField("trakt_sections", &sections)
+
+			if err == nil {
+				for _, t := range []string{"home", "movies", "shows"} {
+					s := sections[t].([]any)
+					if s != nil {
+						for i := range s {
+							sections[t].([]any)[i].(map[string]any)["title"] = helpers.ParseDates(
+								sections[t].([]any)[i].(map[string]any)["title"].(string),
+							)
+							sections[t].([]any)[i].(map[string]any)["url"] = helpers.ParseDates(
+								sections[t].([]any)[i].(map[string]any)["url"].(string),
+							)
+						}
+					}
+
+				}
+
+				str, err := json.Marshal(sections)
+				if err == nil {
+					u.(*models.Record).Set("trakt_sections", string(str))
+				}
+			}
+
+			return c.JSON(http.StatusOK, u)
+		}, RequireDeviceOrRecordAuth(app))
+
 		e.Router.Any("/_trakt/*", func(c echo.Context) error {
 			info := apis.RequestInfo(c)
-			id := ""
-			if info.AuthRecord == nil {
-				d, _ := getDevice(app, c)
-				if d != nil {
-					id = d.Get("user").(string)
-				}
-			} else {
-				id = info.AuthRecord.Id
-			}
+
+			id := info.AuthRecord.Id
 
 			t := make(map[string]any)
 			u, _ := app.Dao().FindRecordById("users", id)
@@ -132,7 +177,7 @@ func main() {
 			)
 
 			for k, v := range headers {
-				if helpers.ArrayContains([]string{
+				if funk.Contains([]string{
 					"Content-Encoding",
 					"Access-Control-Allow-Origin",
 				}, k) {
@@ -150,7 +195,7 @@ func main() {
 			result, headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil, app)
 
 			for k, v := range headers {
-				if helpers.ArrayContains([]string{
+				if funk.Contains([]string{
 					"Content-Encoding",
 					"Access-Control-Allow-Origin",
 				}, k) {
@@ -171,18 +216,6 @@ func main() {
 
 		return nil
 	})
-
-	// go func() {
-	// 	for {
-	// 		// fmt.Println("hello world")
-	// 		time.Sleep(1 * time.Second)
-	// 		res := make([]User, 0)
-	// 		err := app.Dao().DB().NewQuery("SELECT * FROM users").All(&res)
-	// 		if err == nil {
-	// 			// fmt.Println(res[0].Id)
-	// 		}
-	// 	}
-	// }()
 
 	if err := app.Start(); err != nil {
 		log.Fatal(err)

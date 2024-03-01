@@ -14,45 +14,6 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 )
 
-func ArrayContains(alpha []string, str string) bool {
-
-	// iterate using the for loop
-	for i := 0; i < len(alpha); i++ {
-		// check
-		if alpha[i] == str {
-			// return true
-			return true
-		}
-	}
-	return false
-}
-
-func IntArrayContains(alpha []int, str int) bool {
-
-	// iterate using the for loop
-	for i := 0; i < len(alpha); i++ {
-		// check
-		if alpha[i] == str {
-			// return true
-			return true
-		}
-	}
-	return false
-}
-
-func FloatArrayContains(alpha []float64, str float64) bool {
-
-	// iterate using the for loop
-	for i := 0; i < len(alpha); i++ {
-		// check
-		if alpha[i] == str {
-			// return true
-			return true
-		}
-	}
-	return false
-}
-
 func GetHomeDir() string {
 	currentUser, err := user.Current()
 	if err != nil {
@@ -94,7 +55,7 @@ func WriteTmdbCache(app *pocketbase.PocketBase, id uint, resource string, data *
 }
 
 func WriteTraktSeasonCache(app *pocketbase.PocketBase, id uint, data *interface{}) {
-	log.Info("cache write", "for", "trakt", "resource", "show", "id", id)
+	log.Info("cache write", "for", "trakt", "resource", "show_seasons", "id", id)
 	record, err := app.Dao().
 		FindFirstRecordByFilter("trakt_seasons", "trakt_id = {:id}", dbx.Params{"id": id})
 
@@ -116,21 +77,32 @@ func ReadTraktSeasonCache(app *pocketbase.PocketBase, id uint) []any {
 		FindFirstRecordByFilter("trakt_seasons", "trakt_id = {:id}", dbx.Params{"id": id})
 	res := make([]any, 0)
 	if err == nil {
-		record.UnmarshalJSONField("data", &res)
-		log.Debug("cache hit", "for", "trakt", "resource", "show", "id", id)
-		return res
+		err := record.UnmarshalJSONField("data", &res)
+		date := record.GetDateTime("updated")
+		now := time.Now()
+
+		if err == nil {
+			if date.Time().Before(now.AddDate(0, 0, -1)) {
+				return nil
+			}
+			log.Debug("cache hit", "for", "trakt", "resource", "show_seasons", "id", id)
+			return res
+		}
 	}
 	return nil
 }
 
 func ParseDates(str string) string {
-	now := time.Now()
 
 	re := regexp.MustCompile("::(year|month|day):(\\+|-)?(\\d+)?:")
 
 	matches := re.FindAllStringSubmatch(str, -1)
 
 	for _, match := range matches {
+		now := time.Now()
+		yearVal := 0
+		monthVal := 0
+		dayVal := 0
 		if len(match) == 4 {
 			val := 0
 			if v, err := strconv.Atoi(match[3]); err == nil {
@@ -140,16 +112,21 @@ func ParseDates(str string) string {
 				val *= -1
 			}
 			if match[1] == "year" {
-				now = now.AddDate(val, 0, 0)
-				str = strings.ReplaceAll(str, match[0], fmt.Sprintf("%d", now.Year()))
+
+				yearVal = val
+				str = strings.ReplaceAll(str, match[0], "#year#")
 			} else if match[1] == "month" {
-				now = now.AddDate(0, val, 0)
-				str = strings.ReplaceAll(str, match[0], fmt.Sprintf("%d", int(now.Month())))
+				monthVal = val
+				str = strings.ReplaceAll(str, match[0], "#month#")
 			} else if match[1] == "day" {
-				now = now.AddDate(0, 0, val)
-				str = strings.ReplaceAll(str, match[0], fmt.Sprintf("%d", now.Day()))
+				dayVal = val
+				str = strings.ReplaceAll(str, match[0], "#day#")
 			}
 		}
+		now = now.AddDate(yearVal, monthVal, dayVal)
+		str = strings.ReplaceAll(str, "#year#", fmt.Sprintf("%d", now.Year()))
+		str = strings.ReplaceAll(str, "#month#", fmt.Sprintf("%d", now.Month()))
+		str = strings.ReplaceAll(str, "#day#", fmt.Sprintf("%d", now.Day()))
 
 	}
 

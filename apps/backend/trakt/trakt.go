@@ -58,7 +58,7 @@ func removeDuplicates(objmap []any) []any {
 	toRemove := make([]int, 0)
 	for i, o := range objmap {
 		id := o.(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"].(float64)
-		if !helpers.FloatArrayContains(showsSeen, id) {
+		if !funk.ContainsFloat64(showsSeen, id) {
 			showsSeen = append(showsSeen, id)
 		} else {
 			toRemove = append(toRemove, i)
@@ -68,7 +68,7 @@ func removeDuplicates(objmap []any) []any {
 	newmap := make([]any, 0)
 
 	for i, o := range objmap {
-		if !helpers.IntArrayContains(toRemove, i) {
+		if !funk.ContainsInt(toRemove, i) {
 			newmap = append(newmap, o)
 		}
 	}
@@ -87,7 +87,7 @@ func removeWatched(objmap []any) []any {
 	newmap := make([]any, 0)
 
 	for i, o := range objmap {
-		if !helpers.IntArrayContains(toRemove, i) {
+		if !funk.ContainsInt(toRemove, i) {
 			newmap = append(newmap, o)
 		}
 	}
@@ -205,7 +205,7 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 	var status = 200
 	for k, v := range Headers {
 
-		if helpers.ArrayContains([]string{"Host", "Connection"}, k) {
+		if funk.Contains([]string{"Host", "Connection"}, k) {
 			continue
 		}
 		request.SetHeader(k, v.(string))
