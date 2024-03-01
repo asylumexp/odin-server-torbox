@@ -1,5 +1,5 @@
-import pocketbase from "pocketbase";
+import pocketbase from 'pocketbase'
 
 export const usePb = () => {
-  return new pocketbase("http://127.0.0.1:8090");
-};
+	return new pocketbase(useRuntimeConfig().public.pbUrl)
+}

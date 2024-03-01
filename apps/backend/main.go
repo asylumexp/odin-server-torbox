@@ -55,6 +55,7 @@ func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 }
 
 func main() {
+
 	l, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if err == nil {
 		log.SetLevel(l)

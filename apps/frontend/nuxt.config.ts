@@ -4,6 +4,12 @@ export default defineNuxtConfig({
 	devtools: { enabled: true },
 	modules: ['nuxt-primevue', '@nuxtjs/tailwindcss', '@pinia/nuxt'],
 
+	runtimeConfig: {
+		public: {
+			pbUrl: process.env.PB_URL || 'http://localhost:8090',
+		},
+	},
+
 	css: ['primevue/resources/themes/lara-dark-indigo/theme.css'],
 
 	app: {

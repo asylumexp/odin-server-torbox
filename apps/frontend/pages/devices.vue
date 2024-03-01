@@ -50,8 +50,7 @@
 	}
 	async function linkDevice() {
 		loading.value = true
-		// const url = useRequestURL().origin
-		const url = 'https://local-8090.add.dnmc.in'
+		const url = useRuntimeConfig().public.pbUrl
 		const deviceToken = await generateToken()
 
 		const d = await usePb()
