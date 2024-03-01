@@ -1,7 +1,7 @@
 From golang:alpine as builder
 WORKDIR /go/build/
 COPY . .
-RUN CGO_ENABLED=0 go build -o odin-scraper
+RUN CGO_ENABLED=0 go build -o odin-backend
 
 
 
@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 go build -o odin-scraper
 FROM alpine
 RUN apk --update add ca-certificates curl
 WORKDIR /
-COPY --from=builder /go/build/odin-scraper /odin-scraper
+COPY --from=builder /go/build/odin-backend /odin-backend
 
 
-CMD ["/odin-scraper"]
+CMD ["/odin-backend"]

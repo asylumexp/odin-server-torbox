@@ -4,6 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "watchexec -r -e go -- go run main.go serve --http 0.0.0.0:8090",
-    "build": "CGO_ENABLED=0 go build"
+    "build": "mkdir build || true && CGO_ENABLED=0 go build -o build/odin-server"
   }
 }
