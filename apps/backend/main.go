@@ -7,11 +7,11 @@ import (
 	"os"
 	"strings"
 
-	"backend/helpers"
-	"backend/realdebrid"
-	"backend/scraper"
-	"backend/tmdb"
-	"backend/trakt"
+	"github.com/odin-movieshow/server/helpers"
+	"github.com/odin-movieshow/server/realdebrid"
+	"github.com/odin-movieshow/server/scraper"
+	"github.com/odin-movieshow/server/tmdb"
+	"github.com/odin-movieshow/server/trakt"
 
 	"github.com/charmbracelet/log"
 	"github.com/labstack/echo/v5"

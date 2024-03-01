@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"backend/helpers"
-	"backend/settings"
-	"backend/tmdb"
+	"github.com/odin-movieshow/server/helpers"
+	"github.com/odin-movieshow/server/settings"
+	"github.com/odin-movieshow/server/tmdb"
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"backend/settings"
-	"backend/types"
+	"github.com/odin-movieshow/server/settings"
+	"github.com/odin-movieshow/server/types"
 
 	"github.com/charmbracelet/log"
 	"github.com/go-resty/resty/v2"

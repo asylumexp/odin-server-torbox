@@ -1,4 +1,4 @@
-module backend
+module github.com/odin-movieshow/server
 
 go 1.21.7
 
@@ -8,6 +8,7 @@ require (
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/pocketbase/dbx v1.10.1
 	github.com/pocketbase/pocketbase v0.21.3
+	github.com/thoas/go-funk v0.9.3
 )
 
 require (

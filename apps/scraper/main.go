@@ -2,7 +2,8 @@ package main
 
 import (
 	"os"
-	"scraper/jackett"
+
+	"github.com/odin-movieshow/scraper/jackett"
 
 	"github.com/charmbracelet/log"
 	"github.com/gofiber/fiber/v2"

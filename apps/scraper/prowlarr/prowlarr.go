@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"scraper/common"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/odin-movieshow/scraper/common"
 
 	"github.com/charmbracelet/log"
 	"github.com/go-resty/resty/v2"

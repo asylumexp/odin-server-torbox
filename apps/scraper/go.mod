@@ -1,4 +1,4 @@
-module scraper
+module github.com/odin-movieshow/scraper
 
 go 1.21.7
 
