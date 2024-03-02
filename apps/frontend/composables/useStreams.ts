@@ -35,7 +35,6 @@ export const useStreams = defineStore('useStreams', () => {
 	const videoUrl = ref('')
 
 	async function getStreams() {
-		console.log(JSON.stringify(data.value))
 		if (!data.value) return []
 		let id = ''
 		if (data.value.type === 'movie') {
@@ -44,7 +43,6 @@ export const useStreams = defineStore('useStreams', () => {
 			id = `${(data.value as EpisodeStream).show_title}-${(data.value as EpisodeStream).season_number}-${(data.value as EpisodeStream).episode_number}`
 		}
 		if (!list.value[id]) {
-			console.log('should fetch')
 			list.value[id] = await usePb().send('scrape', {
 				method: 'POST',
 				body: data.value,

@@ -1,10 +1,20 @@
 <template>
 	<div id="app" data-theme="odin">
-		<NuxtLayout>
+		<div v-if="loading"><span class="loading loading-infinity loading-lg text-success"></span></div>
+		<NuxtLayout v-else>
 			<NuxtPage />
 		</NuxtLayout>
 	</div>
 </template>
+
+<script lang="ts" setup>
+	const loading = ref(false)
+	onMounted(async () => {
+		loading.value = true
+		await useSettings().initConfig()
+		loading.value = false
+	})
+</script>
 
 <style>
 	.page-enter-active,

@@ -41,7 +41,6 @@ export const useMedia = defineStore('useMedia', () => {
 	const setDetail = (item: any) => {
 		if (!detail.value[getId(item)]) {
 			if (item.type === 'episode') {
-				console.log('episode')
 				detail.value[getId(item)] = item.show
 			} else {
 				detail.value[getId(item)] = item

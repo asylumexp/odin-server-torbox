@@ -18,8 +18,16 @@ const (
 	TMDB_URL = "https://api.themoviedb.org/3"
 )
 
-func PopulateTMDB(k int, wg *sync.WaitGroup, objmap []any, app *pocketbase.PocketBase) {
+func PopulateTMDB(
+	k int,
+	wg *sync.WaitGroup,
+	mux *sync.Mutex,
+	objmap []any,
+	app *pocketbase.PocketBase,
+) {
 	defer wg.Done()
+	defer mux.Unlock()
+	mux.Lock()
 	t := settings.GetTmdb(app)
 	tmdbKey := t.Key
 	resource := "movie"

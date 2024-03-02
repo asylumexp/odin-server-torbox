@@ -10,5 +10,6 @@
 </template>
 
 <script lang="ts" setup>
+	await useSettings().initConfig()
 	await useProfile().init()
 </script>

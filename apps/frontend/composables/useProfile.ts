@@ -3,7 +3,6 @@ export const useProfile = defineStore('useProfile', () => {
 	async function init() {
 		if (usePb().authStore.isAdmin) {
 			me.value = await usePb().admins.getOne(usePb().authStore.model?.id)
-			console.log(me.value)
 			return
 		}
 		me.value = await usePb()

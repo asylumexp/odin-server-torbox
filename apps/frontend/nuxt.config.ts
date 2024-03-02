@@ -4,14 +4,12 @@ export default defineNuxtConfig({
 	devtools: { enabled: true },
 	modules: ['nuxt-primevue', '@nuxtjs/tailwindcss', '@pinia/nuxt'],
 
+	css: ['primevue/resources/themes/lara-dark-indigo/theme.css'],
 	runtimeConfig: {
 		public: {
-			pbUrl: process.env.PB_URL || 'http://localhost:8090',
+			pbUrl: 'http://127.0.0.1:8090',
 		},
 	},
-
-	css: ['primevue/resources/themes/lara-dark-indigo/theme.css'],
-
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
 		layoutTransition: { name: 'layout', mode: 'out-in' },

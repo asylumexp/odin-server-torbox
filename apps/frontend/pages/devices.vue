@@ -13,11 +13,19 @@
 		</table>
 		<dialog class="modal" ref="device_dialog">
 			<div class="modal-box">
-				<h1>Dialog open</h1>
-				<input type="text" v-model="id" />
-
-				<button v-if="!verified && !loading" @click="linkDevice">Link Device</button>
-				<div v-if="loading">Loading</div>
+				<div v-if="loading" class="text-center">
+					<h3 class="text-success">Linking devices</h3>
+					<span class="loading loading-infinity loading-lg text-success"></span>
+					<p>{{ url }}</p>
+				</div>
+				<div v-else class="text-center">
+					<h1><FaIcon icon="tv" class="mr-5" />Link Device</h1>
+					<p>Please enter the code shown on your TV app</p>
+					<input type="text" class="input input-bordered mr-5" v-model="id" />
+					<button class="btn btn-md btn-primary" v-if="!verified && !loading" @click="linkDevice">Link Device</button>
+					<p class="text-sm m-0 mt-10">The following URL will be sent to the device:</p>
+					<p class="text-success text-sm m-0">{{ url }}</p>
+				</div>
 			</div>
 		</dialog>
 	</div>
@@ -28,6 +36,7 @@
 	const loading = ref(false)
 	const device_dialog = ref<HTMLDialogElement>()
 	const id = ref('')
+	const url = ref('')
 	const verified = ref(false)
 	const dialogOpen = ref(false)
 
@@ -50,7 +59,6 @@
 	}
 	async function linkDevice() {
 		loading.value = true
-		const url = useRuntimeConfig().public.pbUrl
 		const deviceToken = await generateToken()
 
 		const d = await usePb()
@@ -78,6 +86,7 @@
 			await new Promise((resolve) => setTimeout(resolve, 5000))
 		}
 		loading.value = false
+		verified.value = false
 		device_dialog.value?.close()
 		devices.value = await getDevices()
 	}
@@ -87,6 +96,7 @@
 			.getFullList({ filter: `(user='${usePb().authStore.model?.id}')` })
 	}
 	onMounted(async () => {
+		url.value = (await usePb().send('/backendurl', { method: 'GET' })).url
 		devices.value = await getDevices()
 	})
 </script>

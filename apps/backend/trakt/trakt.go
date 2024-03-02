@@ -271,11 +271,12 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 
 				// if !strings.Contains(endpoint, "/history") {
 				var wg sync.WaitGroup
+				var mux sync.Mutex
 				if FetchTMDB {
-					getTMDB(&wg, objmap.([]any), app)
+					getTMDB(&wg, &mux, objmap.([]any), app)
 				}
 				if FetchSeasons {
-					getSeasons(&wg, objmap.([]any), app)
+					getSeasons(&wg, &mux, objmap.([]any), app)
 				}
 				wg.Wait()
 				objmap = GetWatched(objmap.([]any), app)
@@ -333,21 +334,22 @@ func FixEpisodes(result any) []any {
 
 }
 
-func getTMDB(wg *sync.WaitGroup, objmap []any, app *pocketbase.PocketBase) {
+func getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {
 	for k := range objmap {
 		wg.Add(1)
-		go tmdb.PopulateTMDB(k, wg, objmap, app)
+		go tmdb.PopulateTMDB(k, wg, mux, objmap, app)
 	}
 }
 
-func getSeasons(wg *sync.WaitGroup, objmap []any, app *pocketbase.PocketBase) {
+func getSeasons(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {
 	if len(objmap) == 0 {
 		return
 	}
 	if objmap[0].(map[string]any)["show"] != nil {
+
 		for k := range objmap {
 			wg.Add(1)
-			go PopulateSeasons(k, wg, objmap, app)
+			go PopulateSeasons(k, wg, mux, objmap, app)
 		}
 	}
 }
@@ -445,8 +447,10 @@ func GetWatched(objmap []any, app *pocketbase.PocketBase) []any {
 
 }
 
-func PopulateSeasons(k int, wg *sync.WaitGroup, objmap []any, app *pocketbase.PocketBase) {
+func PopulateSeasons(k int, wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {
+	mux.Lock()
 	defer wg.Done()
+	defer mux.Unlock()
 	id :=
 		int(objmap[k].(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
 	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)

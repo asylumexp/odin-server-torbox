@@ -1,8 +1,10 @@
 import _ from 'lodash'
 
 export const useSettings = defineStore('useSettings', () => {
-	let settings = ref()
+	const settings = ref()
+	const config = ref()
 	async function init() {
+		await initConfig()
 		const existing = (await usePb().collection('settings').getList()).items[0] ?? {}
 		settings.value = _.merge(
 			{
@@ -25,18 +27,24 @@ export const useSettings = defineStore('useSettings', () => {
 			existing
 		)
 	}
+
+	async function initConfig() {
+		const data = (await useFetch('/api/configs')).data.value
+		config.value = data
+	}
+
 	async function save() {
 		if (settings.value.id) {
-			console.log('updating settings')
 			await usePb().collection('settings').update(settings.value.id, settings.value)
 		} else {
-			console.log('new settings')
 			settings.value = await usePb().collection('settings').create(settings.value)
 		}
 	}
 	return {
 		settings,
+		config,
 		init,
+		initConfig,
 		save,
 	}
 })

@@ -3,11 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/odin-movieshow/server/helpers"
+	"github.com/odin-movieshow/server/imdb"
 	"github.com/odin-movieshow/server/realdebrid"
 	"github.com/odin-movieshow/server/scraper"
 	"github.com/odin-movieshow/server/tmdb"
@@ -30,6 +33,7 @@ func getDevice(app *pocketbase.PocketBase, c echo.Context) (*models.Record, erro
 }
 
 func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
+	mut := sync.RWMutex{}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			record, _ := c.Get("authRecord").(*models.Record)
@@ -39,7 +43,9 @@ func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 					if d.GetBool("verified") {
 						u, err := app.Dao().FindRecordById("users", d.Get("user").(string))
 						if err == nil {
+							mut.Lock()
 							c.Set("authRecord", u)
+							mut.Unlock()
 						}
 					}
 				}
@@ -63,6 +69,15 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 	}
 
+	if os.Getenv("BACKEND_URL") == "" {
+		log.Fatal("BACKEND_URL is required")
+		os.Exit(0)
+	}
+
+	fname := "The.Beekeeper.2024.1080p.HD-TS-C1NEM4.mp4"
+	mimetype := mime.TypeByExtension(fname[strings.LastIndex(fname, "."):])
+	log.Error(mimetype)
+
 	conf := pocketbase.Config{}
 	app := pocketbase.NewWithConfig(conf)
 	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
@@ -81,9 +96,9 @@ func main() {
 
 		})
 
-		// scheduler.MustAdd("daily", "0 0 * * *", func() {
-		// 	realdebrid.Cleanup(app)
-		// })
+		scheduler.MustAdd("daily", "0 4 * * *", func() {
+			realdebrid.Cleanup(app)
+		})
 
 		scheduler.Start()
 
@@ -97,8 +112,9 @@ func main() {
 			return c.JSON(http.StatusOK, data)
 		}, RequireDeviceOrRecordAuth(app))
 
-		e.Router.GET("/device", func(c echo.Context) error {
-			return c.JSON(http.StatusOK, map[string]any{"test": "ok"})
+		e.Router.GET("/imdb/:id", func(c echo.Context) error {
+			id := c.PathParam("id")
+			return c.JSON(http.StatusOK, imdb.Get(id))
 		})
 
 		e.Router.GET("/device/verify/:id", func(c echo.Context) error {
@@ -113,8 +129,8 @@ func main() {
 			return c.JSON(http.StatusNotFound, nil)
 		}, apis.RequireGuestOnly())
 
-		e.Router.GET("/sections/", func(c echo.Context) error {
-			return c.String(http.StatusOK, "Hello, World!")
+		e.Router.GET("/backendurl", func(c echo.Context) error {
+			return c.JSON(http.StatusOK, map[string]any{"url": os.Getenv("BACKEND_URL")})
 		}, RequireDeviceOrRecordAuth(app))
 
 		e.Router.GET("/user", func(c echo.Context) error {

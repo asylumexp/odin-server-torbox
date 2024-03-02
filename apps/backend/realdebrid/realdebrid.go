@@ -176,6 +176,7 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 	downloads := make([]map[string]any, 0)
 
 	for _, v := range links {
+		log.Debug("realdebrid unrestricted", "link", v.(string))
 		u, _, _ := CallEndpoint("/unrestrict/link", "POST", map[string]string{
 			"link": v.(string),
 		}, app)
@@ -183,14 +184,28 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 			continue
 		}
 		fname := u.(map[string]any)["filename"].(string)
+
 		mimetype := mime.TypeByExtension(fname[strings.LastIndex(fname, "."):])
-		log.Debug(mimetype, "file", fname)
+
 		isVideo := strings.Contains(
 			mimetype,
 			"video",
 		)
-		match, _ := regexp.MatchString("^Sample[ -]?[0-9].", fname)
+
+		match, _ := regexp.MatchString("^[Ss]ample[ -]?[0-9].", fname)
+		log.Debug(
+			"realdebrid file found",
+			"file",
+			fname,
+			"mime",
+			mimetype,
+			"video",
+			isVideo,
+			"match",
+			match,
+		)
 		if !match && isVideo {
+			log.Debug("realdebrid unrestricted", "file", fname)
 			downloads = append(downloads, u.(map[string]any))
 		}
 	}

@@ -1,10 +1,12 @@
-FROM node:21 as builder
+FROM node:alpine as builder
 WORKDIR /build/
 COPY . . 
 RUN npm i -g pnpm
 RUN pnpm i
-RUN pnpm run generate
+RUN pnpm run build
 
+FROM node:alpine
+WORKDIR /app
+COPY --from=builder /build/.output /app
 
-FROM lipanski/docker-static-website:latest
-COPY --from=builder /build/.output/. .
+CMD ["node", "server/index.mjs"]

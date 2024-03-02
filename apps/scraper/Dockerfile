@@ -1,13 +1,13 @@
 From golang:alpine as builder
 WORKDIR /build/
 COPY . .
-RUN CGO_ENABLED=0 go mod tidy && go build -o odin-scraper
+RUN CGO_ENABLED=0 GOOS=linux go mod tidy && go build -a -installsuffix cgo -o odin-scraper
 
 
 
 
 FROM alpine
-RUN apk --update add ca-certificates curl
+RUN apk --update add ca-certificates curl mailcap
 WORKDIR /
 COPY --from=builder /build/odin-scraper /odin-scraper
 

@@ -48,5 +48,14 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase) []types.Torrent {
 	}
 	wg.Wait()
 
+	filtered := []types.Torrent{}
+	unrestricted := 0
+	for _, t := range allTorrents {
+		if len(t.RealDebrid) > 0 {
+			filtered = append(filtered, t)
+			unrestricted += len(t.RealDebrid)
+		}
+	}
+	log.Info("scrape done", "unrestricted", unrestricted)
 	return allTorrents
 }
