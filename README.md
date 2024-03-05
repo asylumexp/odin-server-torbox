@@ -5,7 +5,7 @@ Odin
 
 <h4 align="center">Enjoy movies and TV shows.</h4>
 
-<h2 align="center">To be used with <a href="#">Odin TV</a></h2>
+<h2 align="center">To be used with <a href="https://github.com/ad-on-is/odin-tv">Odin TV</a></h2>
 
 ![screenshot](./screenshots/odin-screenshot.png)
 
@@ -86,6 +86,25 @@ services:
 - If not already, login as your user in the Odin frontend, and go to devices
 - Click on **Link device** and enter the code shown on your TV
 
+## Running local dev environment
+
+```bash
+# install Bun
+curl -fsSL https://bun.sh/install | bash
+
+# lone the repo
+git clone https://github.com/ad-on-is/odin-movieshow
+cd odin-movieshow
+
+# install dependencies
+bun install
+
+# create apps/backend/.env and provide JACKETT_URL and JACKETT_KEY
+
+# run dev
+bun run dev
+```
+
 ## License
 
 MIT
@@ -93,4 +112,5 @@ MIT
 ---
 
 > [adisdurakovic.com](https://adisdurakovic.com) &nbsp;&middot;&nbsp;
-> GitHub [@ad-on-is](https://github.com/ad-on-is)
+> GitHub [@ad-on-is](https://github.com/ad-on-is) &nbsp;&middot;&nbsp;
+> Built using [pocketbase](https://pocketbase.io/) and [Nuxt](https://nuxt.com/)
