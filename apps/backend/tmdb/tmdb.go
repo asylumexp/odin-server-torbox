@@ -26,8 +26,8 @@ func PopulateTMDB(
 	app *pocketbase.PocketBase,
 ) {
 	defer wg.Done()
-	defer mux.Unlock()
-	mux.Lock()
+	// defer mux.Unlock()
+	// mux.Lock()
 	t := settings.GetTmdb(app)
 	tmdbKey := t.Key
 	resource := "movie"

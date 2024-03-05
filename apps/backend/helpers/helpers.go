@@ -29,8 +29,17 @@ func ReadTmdbCache(app *pocketbase.PocketBase, id uint, resource string) interfa
 	res := make(map[string]any)
 	if err == nil {
 		record.UnmarshalJSONField("data", &res)
-		log.Debug("cache hit", "for", "tmdb", "resource", resource, "id", id)
-		return res
+		err := record.UnmarshalJSONField("data", &res)
+		date := record.GetDateTime("updated")
+		now := time.Now()
+		if err == nil {
+			if date.Time().Before(now.AddDate(0, 0, -1)) {
+				return nil
+			}
+			log.Debug("cache hit", "for", "tmdb", "resource", resource, "id", id)
+
+			return res
+		}
 	}
 	return nil
 }
@@ -97,9 +106,9 @@ func ParseDates(str string) string {
 	re := regexp.MustCompile("::(year|month|day):(\\+|-)?(\\d+)?:")
 
 	matches := re.FindAllStringSubmatch(str, -1)
-
+	now := time.Now()
 	for _, match := range matches {
-		now := time.Now()
+
 		yearVal := 0
 		monthVal := 0
 		dayVal := 0
@@ -130,5 +139,23 @@ func ParseDates(str string) string {
 
 	}
 
+	re2 := regexp.MustCompile("::monthdays::")
+
+	matches2 := re2.FindAllStringSubmatch(str, -1)
+	dinm := daysInMonth(now)
+	for _, match := range matches2 {
+		str = strings.ReplaceAll(str, match[0], fmt.Sprintf("%d", dinm[len(dinm)-1]))
+	}
+
 	return str
+}
+
+func daysInMonth(t time.Time) []int {
+	t = time.Date(t.Year(), t.Month(), 32, 0, 0, 0, 0, time.UTC)
+	daysInMonth := 32 - t.Day()
+	days := make([]int, daysInMonth)
+	for i := range days {
+		days[i] = i + 1
+	}
+	return days
 }

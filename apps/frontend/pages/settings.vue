@@ -13,6 +13,14 @@
 								<FaIcon icon="list" class="handle mt-2 mr-2 opacity-30" size="sm" />
 								<input class="input input-sm input-bordered mr-2 flex-1" v-model="element.title" placeholder="Title" />
 								<input class="input input-sm input-bordered flex-grow" placeholder="URL" v-model="element.url" />
+								<label class="cursor-pointer label">
+									<span class="label-text mr-2">Big</span>
+									<input type="checkbox" v-model="element.big" class="checkbox checkbox-secondary checkbox-sm" />
+								</label>
+								<label class="cursor-pointer label">
+									<span class="label-text mr-2">Paginate</span>
+									<input type="checkbox" v-model="element.paginate" class="checkbox checkbox-secondary checkbox-sm" />
+								</label>
 								<button class="btn btn-sm ml-2" @click="deleteSection(k, index)">
 									<FaIcon icon="trash" />
 								</button>
@@ -45,6 +53,8 @@
 		sections[place].push({
 			title: '',
 			url: '',
+			big: false,
+			paginate: false,
 		})
 	}
 

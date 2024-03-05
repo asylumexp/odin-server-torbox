@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"mime"
 	"net/http"
 	"os"
 	"strings"
@@ -73,10 +72,6 @@ func main() {
 		log.Fatal("BACKEND_URL is required")
 		os.Exit(0)
 	}
-
-	fname := "The.Beekeeper.2024.1080p.HD-TS-C1NEM4.mp4"
-	mimetype := mime.TypeByExtension(fname[strings.LastIndex(fname, "."):])
-	log.Error(mimetype)
 
 	conf := pocketbase.Config{}
 	app := pocketbase.NewWithConfig(conf)
@@ -179,7 +174,7 @@ func main() {
 
 			jsonData := apis.RequestInfo(c).Data
 			url := strings.ReplaceAll(c.Request().URL.String(), "/_trakt", "")
-			if strings.Contains(url, "scrobble") {
+			if strings.Contains(url, "scrobble/stop") {
 				go func() {
 					trakt.SyncHistory(app)
 				}()

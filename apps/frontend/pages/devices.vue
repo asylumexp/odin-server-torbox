@@ -72,7 +72,7 @@
 		const topic = `odinmovieshows-${id.value}`
 		const deviceId = d.id
 		const data = {
-			url,
+			url: url.value,
 			deviceId,
 		}
 

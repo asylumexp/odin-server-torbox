@@ -199,6 +199,7 @@ func RefreshTokens(app *pocketbase.PocketBase) {
 func CallEndpoint(endpoint string, method string, body map[string]any, donorm bool, app *pocketbase.PocketBase) (any, http.Header, int) {
 
 	var objmap any
+
 	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 3).R()
 	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", settings.GetTrakt(app).ClientId)
 	var respHeaders http.Header
@@ -237,17 +238,18 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 		}
 		endpoint += "extended=full&limit=30"
 	}
-	log.Debug("trakt", "fetch", endpoint)
+
 	// var listError error
 	if resp, err := r(fmt.Sprintf("%s%s", TRAKT_URL, endpoint)); err == nil {
 		respHeaders = resp.Header()
 		status = resp.StatusCode()
+		log.Debug("trakt fetch", "url", endpoint, "method", method, "status", status, "body", body, "headers")
 		if status > 299 {
-			log.Error("trakt", "fetch", endpoint, "status", status)
+			log.Error("trakt", "fetch", endpoint, "status", status, "res", string(resp.Body()))
 		}
 		err := json.Unmarshal(resp.Body(), &objmap)
 		if err != nil {
-			log.Error("trakt", "fetch", endpoint, err)
+			log.Error("trakt", "unmarshal", err)
 		}
 
 		switch objmap.(type) {
@@ -448,9 +450,9 @@ func GetWatched(objmap []any, app *pocketbase.PocketBase) []any {
 }
 
 func PopulateSeasons(k int, wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {
-	mux.Lock()
 	defer wg.Done()
-	defer mux.Unlock()
+	// defer mux.Unlock()
+	// mux.Lock()
 	id :=
 		int(objmap[k].(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
 	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
