@@ -22,7 +22,7 @@ Odin is a self-hostable solution to watch movies and TV shows.
 - Scrape Jackett for Torrents
 - Unrestrict links with RealDebrid
 
-## Prerquisites
+## Prerequisites
 
 - A Trakt API account
   - Create a new App: https://trakt.tv/oauth/applications/new
