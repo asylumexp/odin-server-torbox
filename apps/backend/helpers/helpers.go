@@ -144,18 +144,21 @@ func ParseDates(str string) string {
 	matches2 := re2.FindAllStringSubmatch(str, -1)
 	dinm := daysInMonth(now)
 	for _, match := range matches2 {
-		str = strings.ReplaceAll(str, match[0], fmt.Sprintf("%d", dinm[len(dinm)-1]))
+		str = strings.ReplaceAll(str, match[0], fmt.Sprintf("%d", dinm))
 	}
 
 	return str
 }
 
-func daysInMonth(t time.Time) []int {
+func daysInMonth(t time.Time) int {
 	t = time.Date(t.Year(), t.Month(), 32, 0, 0, 0, 0, time.UTC)
 	daysInMonth := 32 - t.Day()
 	days := make([]int, daysInMonth)
 	for i := range days {
 		days[i] = i + 1
 	}
-	return days
+
+	d := days[len(days)-1]
+	d += 1
+	return d
 }

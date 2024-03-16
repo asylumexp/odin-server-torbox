@@ -36,6 +36,8 @@
 		method: 'GET',
 	})
 	async function traktLogin() {
+		const settings = useSettings()
+
 		login_dialog.value?.showModal()
 		const res = await usePb().send('/_trakt/oauth/device/code', {
 			method: 'POST',
@@ -58,12 +60,10 @@
 				},
 			})
 			if (res !== null) {
+				console.log(usePb().authStore.model?.id, res)
 				await usePb()
-					.collection('trakt')
-					.create({
-						token: { ...res, device_code: device_code.value },
-						user: usePb().authStore.model?.id,
-					})
+					.collection('users')
+					.update(usePb().authStore.model?.id, { trakt_token: { ...res, device_code: device_code.value } })
 				clearInterval(poll)
 				login_dialog.value?.close()
 			}

@@ -182,10 +182,9 @@ func RefreshTokens(app *pocketbase.PocketBase) {
 	for _, r := range records {
 		t := make(map[string]any)
 		if err := r.UnmarshalJSONField("trakt_token", &t); err == nil {
-			data, _, status := CallEndpoint("/oauth/device/token", "POST", map[string]any{"client_id": settings.GetTrakt(app).ClientId, "client_secret": settings.GetTrakt(app).ClientSecret, "code": t["device_code"], "refresh_token": t["refresh_token"]}, false, app)
+			data, _, status := CallEndpoint("/oauth/token", "POST", map[string]any{"grant_type": "refresh_token", "client_id": settings.GetTrakt(app).ClientId, "client_secret": settings.GetTrakt(app).ClientSecret, "code": t["device_code"], "refresh_token": t["refresh_token"]}, false, app)
 			if status < 300 && data != nil {
 				data.(map[string]any)["device_code"] = t["device_code"]
-				// fmt.Println(data, status)
 				r.Set("trakt_token", data)
 				app.Dao().Save(r)
 				log.Info("trakt refresh token", "user", r.Get("id"))
