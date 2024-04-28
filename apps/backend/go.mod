@@ -5,6 +5,7 @@ go 1.21.7
 require (
 	github.com/charmbracelet/log v0.3.1
 	github.com/go-resty/resty/v2 v2.11.0
+	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/pocketbase/dbx v1.10.1
 	github.com/pocketbase/pocketbase v0.21.3

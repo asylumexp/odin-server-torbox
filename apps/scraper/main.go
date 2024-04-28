@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/odin-movieshow/scraper/jackett"
 
 	"github.com/charmbracelet/log"
@@ -10,6 +11,7 @@ import (
 )
 
 func main() {
+	godotenv.Load()
 	log.SetLevel(log.DebugLevel)
 	jackettUrl := os.Getenv("JACKETT_URL")
 	jackettKey := os.Getenv("JACKETT_KEY")

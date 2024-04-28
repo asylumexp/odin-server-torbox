@@ -229,13 +229,15 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 
 	}
 
-	if !strings.Contains(endpoint, "extended=") {
-		if strings.Contains(endpoint, "?") {
-			endpoint += "&"
-		} else {
-			endpoint += "?"
+	if !strings.Contains(endpoint, "oauth") {
+		if !strings.Contains(endpoint, "extended=") {
+			if strings.Contains(endpoint, "?") {
+				endpoint += "&"
+			} else {
+				endpoint += "?"
+			}
+			endpoint += "extended=full&limit=30"
 		}
-		endpoint += "extended=full&limit=30"
 	}
 
 	// var listError error
@@ -244,7 +246,7 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 		status = resp.StatusCode()
 		log.Debug("trakt fetch", "url", endpoint, "method", method, "status", status, "body", body, "headers")
 		if status > 299 {
-			log.Error("trakt", "fetch", endpoint, "status", status, "res", string(resp.Body()))
+			log.Error("trakt", "fetch", endpoint, "status", status, "res", string(resp.Body()), "body", body, "headers", Headers)
 		}
 		err := json.Unmarshal(resp.Body(), &objmap)
 		if err != nil {
@@ -294,7 +296,7 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 
 		// }
 	} else {
-		log.Error("trakt", "endpint", endpoint, err)
+		log.Error("trakt", "endpoint", endpoint, "body", body, "err", err)
 	}
 
 	return objmap, respHeaders, status

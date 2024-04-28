@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/joho/godotenv"
 	"github.com/odin-movieshow/server/helpers"
 	"github.com/odin-movieshow/server/imdb"
 	"github.com/odin-movieshow/server/realdebrid"
@@ -60,7 +61,7 @@ func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 }
 
 func main() {
-
+	godotenv.Load()
 	l, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if err == nil {
 		log.SetLevel(l)
@@ -162,18 +163,24 @@ func main() {
 			info := apis.RequestInfo(c)
 
 			id := info.AuthRecord.Id
-
+			url := strings.ReplaceAll(c.Request().URL.String(), "/_trakt", "")
+			trakt.Headers = apis.RequestInfo(c).Headers
+			// delete passed header of pocketbase
+			delete(trakt.Headers, "authorization")
 			t := make(map[string]any)
 			u, _ := app.Dao().FindRecordById("users", id)
 			u.UnmarshalJSONField("trakt_token", &t)
-			trakt.Headers = apis.RequestInfo(c).Headers
+
 			trakt.Headers["authorization"] = "Bearer " + t["access_token"].(string)
+			if strings.Contains(url, "/oauth/") {
+				delete(trakt.Headers, "authorization")
+			}
 
 			trakt.FetchSeasons = true
 			trakt.FetchTMDB = true
 
 			jsonData := apis.RequestInfo(c).Data
-			url := strings.ReplaceAll(c.Request().URL.String(), "/_trakt", "")
+
 			if strings.Contains(url, "scrobble/stop") {
 				go func() {
 					trakt.SyncHistory(app)
