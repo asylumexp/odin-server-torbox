@@ -1,7 +1,10 @@
 From golang:alpine as builder
 WORKDIR /build/
+COPY go.mod .
+COPY go.sum .
+RUN CGO_ENABLED=0 GOOS=linux go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go mod tidy && go build -a -installsuffix cgo -o odin-backend
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o odin-backend
 
 
 FROM alpine

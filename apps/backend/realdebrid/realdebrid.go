@@ -142,7 +142,8 @@ func CallEndpoint(
 			"data",
 			strings.Replace(string(resp.Body()), "\n", "", -1),
 		)
-
+	} else {
+		log.Debug("realdebrid", "call", fmt.Sprintf("%s %s", method, endpoint))
 	}
 
 	return data, respHeaders, status
@@ -167,7 +168,21 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 	}, app)
 
 	info, _, _ := CallEndpoint("/torrents/info/"+magnetId, "GET", nil, app)
-	if info == nil || info.(map[string]any)["links"] == nil {
+
+	if info == nil {
+		return
+	}
+
+	torrentId := info.(map[string]any)["id"]
+
+	defer CallEndpoint(
+		fmt.Sprintf("/torrents/delete/%s", torrentId),
+		"DELETE",
+		nil,
+		app,
+	)
+
+	if info.(map[string]any)["links"] == nil {
 		return
 	}
 
@@ -214,6 +229,5 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 }
 
 func Cleanup(app *pocketbase.PocketBase) {
-	RemoveByType(app, "torrents")
 	RemoveByType(app, "downloads")
 }

@@ -1,8 +1,9 @@
 FROM node:alpine as builder
 WORKDIR /build/
-COPY . . 
 RUN npm i -g pnpm
+COPY package.json . 
 RUN pnpm i
+COPY . .
 RUN pnpm run build
 
 FROM node:alpine

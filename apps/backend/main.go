@@ -7,7 +7,9 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/joho/godotenv"
 	"github.com/odin-movieshow/server/helpers"
 	"github.com/odin-movieshow/server/imdb"
@@ -62,6 +64,27 @@ func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 
 func main() {
 	godotenv.Load()
+	log.SetReportCaller(true)
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn: "https://308c965810583274884cbc87d1a584de@sentry.dnmc.in/4",
+		// Set TracesSampleRate to 1.0 to capture 100%
+		// of transactions for performance monitoring.
+		// We recommend adjusting this value in production,
+		TracesSampleRate: 1.0,
+	})
+	if err != nil {
+		log.Error("sentry.Init: %s", err)
+	}
+
+	// Flush buffered events before the program terminates.
+	defer sentry.Flush(2 * time.Second)
+	sentry.CaptureException(fmt.Errorf("This is a test exception"))
+	sentry.CaptureEvent(&sentry.Event{
+		Message: "This is a test error event",
+		Level:   sentry.LevelError,
+	})
+	sentry.CaptureMessage("This is a test message")
+
 	l, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if err == nil {
 		log.SetLevel(l)
