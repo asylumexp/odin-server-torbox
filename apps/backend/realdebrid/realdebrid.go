@@ -95,7 +95,7 @@ func CallEndpoint(
 ) (any, http.Header, int) {
 
 	var data any
-	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 3).R()
+	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 1).R()
 	request.SetResult(&data)
 	var respHeaders http.Header
 	status := 200
@@ -108,6 +108,14 @@ func CallEndpoint(
 	request.SetHeader("Authorization", "Bearer "+rd.AccessToken)
 
 	request.Attempt = 3
+	request.AddRetryCondition(func(r *resty.Response, err error) bool {
+		s, err := strconv.Atoi(r.Status())
+		if err != nil {
+			s = 600
+		}
+
+		return s > 399
+	})
 	var r func(url string) (*resty.Response, error)
 	switch method {
 	case "POST":
