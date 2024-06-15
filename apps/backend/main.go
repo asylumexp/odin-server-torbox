@@ -189,13 +189,16 @@ func main() {
 			url := strings.ReplaceAll(c.Request().URL.String(), "/_trakt", "")
 			trakt.Headers = apis.RequestInfo(c).Headers
 			// delete passed header of pocketbase
-			delete(trakt.Headers, "authorization")
+
 			t := make(map[string]any)
 			u, _ := app.Dao().FindRecordById("users", id)
 			u.UnmarshalJSONField("trakt_token", &t)
+			delete(trakt.Headers, "authorization")
 
-			trakt.Headers["authorization"] = "Bearer " + t["access_token"].(string)
-			if strings.Contains(url, "/oauth/") {
+			if t != nil && t["access_token"] != nil {
+				trakt.Headers["authorization"] = "Bearer " + t["access_token"].(string)
+			}
+			if strings.Contains(url, "fresh=true") {
 				delete(trakt.Headers, "authorization")
 			}
 

@@ -12,7 +12,9 @@
 		<dialog ref="login_dialog" class="modal">
 			<div class="modal-box">
 				<h3 class="font-bold text-lg">Login to Trakt</h3>
-				<p class="py-4">Go to: {{ url }}</p>
+				<p class="py-4">
+					Go to: <a :href="url">{{ url }}</a>
+				</p>
 				<p class="py-4">Enter code:</p>
 				<p>{{ user_code }}</p>
 			</div>
@@ -32,9 +34,14 @@
 	const user_code = ref<string>()
 	const url = ref<string>()
 	const device_code = ref<string>()
-	const traktProfile = await usePb().send('/_trakt/users/settings', {
-		method: 'GET',
-	})
+	let traktProfile: any = null
+	try {
+		traktProfile = await usePb().send('/_trakt/users/settings', {
+			method: 'GET',
+		})
+	} catch (e) {
+		console.log(e)
+	}
 	async function traktLogin() {
 		const settings = useSettings()
 

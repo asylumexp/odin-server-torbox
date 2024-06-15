@@ -108,14 +108,7 @@ func CallEndpoint(
 	request.SetHeader("Authorization", "Bearer "+rd.AccessToken)
 
 	request.Attempt = 3
-	request.AddRetryCondition(func(r *resty.Response, err error) bool {
-		s, err := strconv.Atoi(r.Status())
-		if err != nil {
-			s = 600
-		}
 
-		return s > 399
-	})
 	var r func(url string) (*resty.Response, error)
 	switch method {
 	case "POST":
@@ -171,6 +164,13 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 
 	magnetId := magnet.(map[string]any)["id"].(string)
 
+	defer CallEndpoint(
+		fmt.Sprintf("/torrents/delete/%s", magnetId),
+		"DELETE",
+		nil,
+		app,
+	)
+
 	CallEndpoint("/torrents/selectFiles/"+magnetId, "POST", map[string]string{
 		"files": "all",
 	}, app)
@@ -180,15 +180,6 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 	if info == nil {
 		return
 	}
-
-	torrentId := info.(map[string]any)["id"]
-
-	defer CallEndpoint(
-		fmt.Sprintf("/torrents/delete/%s", torrentId),
-		"DELETE",
-		nil,
-		app,
-	)
 
 	if info.(map[string]any)["links"] == nil {
 		return
