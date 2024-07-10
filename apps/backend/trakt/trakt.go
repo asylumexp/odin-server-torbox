@@ -76,10 +76,31 @@ func removeDuplicates(objmap []any) []any {
 	return newmap
 
 }
+
 func removeWatched(objmap []any) []any {
 	toRemove := make([]int, 0)
 	for i, o := range objmap {
 		if o.(map[string]any)["episode"].(map[string]any)["watched"] != nil && o.(map[string]any)["episode"].(map[string]any)["watched"].(bool) == true {
+			toRemove = append(toRemove, i)
+		}
+	}
+
+	newmap := make([]any, 0)
+
+	for i, o := range objmap {
+		if !funk.ContainsInt(toRemove, i) {
+			newmap = append(newmap, o)
+		}
+	}
+
+	return newmap
+
+}
+
+func removeSeason0(objmap []any) []any {
+	toRemove := make([]int, 0)
+	for i, o := range objmap {
+		if o.(map[string]any)["episode"].(map[string]any)["season"] != nil && o.(map[string]any)["episode"].(map[string]any)["season"].(int) == 0 {
 			toRemove = append(toRemove, i)
 		}
 	}
@@ -270,6 +291,7 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 				if strings.Contains(endpoint, "calendars") {
 					objmap = removeWatched(objmap.([]any))
 					objmap = removeDuplicates(objmap.([]any))
+					objmap = removeSeason0(objmap.([]any))
 				}
 
 				// if !strings.Contains(endpoint, "/history") {

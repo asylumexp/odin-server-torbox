@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "watchexec -r -e go -- go run main.go",
+    "dev": "watchexec -r -e go --stop-signal SIGINT -- go run main.go",
     "build": "mkdir build || true && CGO_ENABLED=0 go build -o build/odin-scraper"
   }
 }
