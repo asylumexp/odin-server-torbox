@@ -39,14 +39,10 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase) []types.Torrent {
 	wg := sync.WaitGroup{}
 
 	for k := range allTorrents {
-		wg.Add(1)
 
-		go func(k int) {
-			defer wg.Done()
-			realdebrid.Unrestrict(k, allTorrents, app)
-		}(k)
+		defer wg.Done()
+		realdebrid.Unrestrict(k, allTorrents, app)
 	}
-	wg.Wait()
 
 	filtered := []types.Torrent{}
 	unrestricted := 0

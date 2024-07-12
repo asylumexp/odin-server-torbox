@@ -83,6 +83,7 @@ func removeWatched(objmap []any) []any {
 		if o.(map[string]any)["episode"].(map[string]any)["watched"] != nil && o.(map[string]any)["episode"].(map[string]any)["watched"].(bool) == true {
 			toRemove = append(toRemove, i)
 		}
+
 	}
 
 	newmap := make([]any, 0)
@@ -98,22 +99,15 @@ func removeWatched(objmap []any) []any {
 }
 
 func removeSeason0(objmap []any) []any {
-	toRemove := make([]int, 0)
-	for i, o := range objmap {
-		if o.(map[string]any)["episode"].(map[string]any)["season"] != nil && o.(map[string]any)["episode"].(map[string]any)["season"].(int) == 0 {
-			toRemove = append(toRemove, i)
+	toKeep := []any{}
+	for _, o := range objmap {
+
+		if o.(map[string]any)["episode"] != nil && o.(map[string]any)["episode"].(map[string]any)["season"] != nil && o.(map[string]any)["episode"].(map[string]any)["season"].(float64) > 0 {
+			toKeep = append(toKeep, o)
 		}
 	}
 
-	newmap := make([]any, 0)
-
-	for i, o := range objmap {
-		if !funk.ContainsInt(toRemove, i) {
-			newmap = append(newmap, o)
-		}
-	}
-
-	return newmap
+	return toKeep
 
 }
 
@@ -265,9 +259,9 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 	if resp, err := r(fmt.Sprintf("%s%s", TRAKT_URL, endpoint)); err == nil {
 		respHeaders = resp.Header()
 		status = resp.StatusCode()
-		log.Debug("trakt fetch", "url", endpoint, "method", method, "status", status, "body", body, "headers")
+		log.Debug("trakt fetch", "url", endpoint, "method", method, "status", status, "body", body, "headers", Headers)
 		if status > 299 {
-			log.Error("trakt", "fetch", endpoint, "status", status, "res", string(resp.Body()), "body", body, "headers", Headers)
+			log.Error("trakt", "fetch", endpoint, "status", status, "res", string(resp.Body()), "body", body, "headers", respHeaders)
 		}
 		err := json.Unmarshal(resp.Body(), &objmap)
 		if err != nil {
@@ -289,9 +283,9 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 			if (objmap.([]any)[0].(map[string]any)["movie"] != nil || objmap.([]any)[0].(map[string]any)["show"] != nil) && !strings.Contains(endpoint, "sync/watched") {
 				objmap = GetWatched(objmap.([]any), app)
 				if strings.Contains(endpoint, "calendars") {
+					objmap = removeSeason0(objmap.([]any))
 					objmap = removeWatched(objmap.([]any))
 					objmap = removeDuplicates(objmap.([]any))
-					objmap = removeSeason0(objmap.([]any))
 				}
 
 				// if !strings.Contains(endpoint, "/history") {
