@@ -95,7 +95,14 @@ func CallEndpoint(
 ) (any, http.Header, int) {
 
 	var data any
-	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 1).R()
+	request := resty.New().
+		SetRetryCount(3).
+		SetRetryWaitTime(time.Second * 3).
+		AddRetryCondition(func(r *resty.Response, err error) bool {
+			return r.StatusCode() == 429
+
+		}).
+		R()
 	request.SetResult(&data)
 	var respHeaders http.Header
 	status := 200
@@ -151,15 +158,14 @@ func CallEndpoint(
 
 }
 
-func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
-	item := objmap[k]
+func Unrestrict(item types.Torrent, app *pocketbase.PocketBase) types.Torrent {
 	magnet, _, _ := CallEndpoint("/torrents/addMagnet", "POST", map[string]string{
 		"host":   "real-debrid.com",
 		"magnet": item.Magnet,
 	}, app)
 
 	if magnet == nil || magnet.(map[string]any)["id"] == nil {
-		return
+		return item
 	}
 
 	magnetId := magnet.(map[string]any)["id"].(string)
@@ -178,11 +184,11 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 	info, _, _ := CallEndpoint("/torrents/info/"+magnetId, "GET", nil, app)
 
 	if info == nil {
-		return
+		return item
 	}
 
 	if info.(map[string]any)["links"] == nil {
-		return
+		return item
 	}
 
 	links := info.(map[string]any)["links"].([]any)
@@ -206,25 +212,16 @@ func Unrestrict(k int, objmap []types.Torrent, app *pocketbase.PocketBase) {
 			"video",
 		)
 
-		match, _ := regexp.MatchString("^[Ss]ample[ -]?[0-9].", fname)
-		log.Debug(
-			"realdebrid file found",
-			"file",
-			fname,
-			"mime",
-			mimetype,
-			"video",
-			isVideo,
-			"match",
-			match,
-		)
+		match, _ := regexp.MatchString("^[Ss]ample[ -_]?[0-9].", fname)
+
 		if !match && isVideo {
 			log.Debug("realdebrid unrestricted", "file", fname)
 			downloads = append(downloads, u.(map[string]any))
 		}
 	}
 
-	objmap[k].RealDebrid = downloads
+	item.RealDebrid = downloads
+	return item
 }
 
 func Cleanup(app *pocketbase.PocketBase) {

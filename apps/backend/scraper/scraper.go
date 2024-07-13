@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/odin-movieshow/server/helpers"
 	"github.com/odin-movieshow/server/realdebrid"
 	"github.com/odin-movieshow/server/settings"
 	"github.com/odin-movieshow/server/types"
@@ -37,21 +38,29 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase) []types.Torrent {
 	}
 
 	wg := sync.WaitGroup{}
+	chunks := helpers.Chunk(allTorrents)
+	allTorrentsUnrestricted := []types.Torrent{}
+	for _, c := range chunks {
+		wg.Add(1)
+		go func(torrents []types.Torrent) {
+			defer wg.Done()
+			for _, k := range torrents {
+				allTorrentsUnrestricted = append(
+					allTorrentsUnrestricted,
+					realdebrid.Unrestrict(k, app),
+				)
+			}
+		}(c)
 
-	for k := range allTorrents {
-
-		defer wg.Done()
-		realdebrid.Unrestrict(k, allTorrents, app)
 	}
+	wg.Wait()
 
 	filtered := []types.Torrent{}
-	unrestricted := 0
-	for _, t := range allTorrents {
+	for _, t := range allTorrentsUnrestricted {
 		if len(t.RealDebrid) > 0 {
 			filtered = append(filtered, t)
-			unrestricted += len(t.RealDebrid)
 		}
 	}
-	log.Info("scrape done", "unrestricted", unrestricted)
-	return allTorrents
+	log.Info("scrape done", "unrestricted", len(filtered))
+	return filtered
 }

@@ -129,6 +129,14 @@ func SeparateByQuality(torrents []Torrent, payload Payload) []Torrent {
 		res["SD"] = []Torrent{}
 	}
 
+	if len(res["4K"]) > 1 {
+		res["1080p"] = res["1080p"][:20]
+	}
+
+	if len(res["1080p"]) > 30 {
+		res["1080p"] = res["1080p"][:30]
+	}
+
 	ret := append(res["4K"], res["1080p"]...)
 	ret = append(ret, res["720p"]...)
 	ret = append(ret, res["SD"]...)
@@ -266,14 +274,14 @@ func GetInfos(title string) ([]string, string) {
 		res = append(res, "HDR")
 	}
 
-	if funk.Contains(res, "4K") {
-		quality = "4K"
+	if funk.Contains(res, "720p") {
+		quality = "720p"
 	}
 	if funk.Contains(res, "1080p") {
 		quality = "1080p"
 	}
-	if funk.Contains(res, "720p") {
-		quality = "720p"
+	if funk.Contains(res, "4K") {
+		quality = "4K"
 	}
 
 	return res, quality

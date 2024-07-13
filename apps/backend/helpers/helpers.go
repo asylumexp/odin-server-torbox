@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/user"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -161,4 +162,31 @@ func daysInMonth(t time.Time) int {
 	d := days[len(days)-1]
 	d += 1
 	return d
+}
+
+func Chunk[T any](slice []T) [][]T {
+	size := ItemsPerChunk(slice)
+	var chunks [][]T
+	for i := 0; i < len(slice); {
+		// Clamp the last chunk to the slice bound as necessary.
+		end := size
+		if l := len(slice[i:]); l < size {
+			end = l
+		}
+
+		// Set the capacity of each chunk so that appending to a chunk does not
+		// modify the original slice.
+		chunks = append(chunks, slice[i:i+end:i+end])
+		i += end
+	}
+
+	return chunks
+}
+
+func ItemsPerChunk[T any](slice []T) int {
+	batchSize := runtime.NumCPU() / 2
+	if len(slice) < batchSize {
+		batchSize = 1
+	}
+	return len(slice) / batchSize
 }
