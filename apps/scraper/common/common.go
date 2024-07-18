@@ -283,6 +283,9 @@ func GetInfos(title string) ([]string, string) {
 	if funk.Contains(res, "4K") {
 		quality = "4K"
 	}
+	if funk.Contains(res, "CAM") {
+		quality = "SD"
+	}
 
 	return res, quality
 }

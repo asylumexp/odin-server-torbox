@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/odin-movieshow/server/settings"
-	"github.com/odin-movieshow/server/types"
 
 	"github.com/charmbracelet/log"
 	"github.com/go-resty/resty/v2"
@@ -158,14 +157,14 @@ func CallEndpoint(
 
 }
 
-func Unrestrict(item types.Torrent, app *pocketbase.PocketBase) types.Torrent {
+func Unrestrict(m string, app *pocketbase.PocketBase) any {
 	magnet, _, _ := CallEndpoint("/torrents/addMagnet", "POST", map[string]string{
 		"host":   "real-debrid.com",
-		"magnet": item.Magnet,
+		"magnet": m,
 	}, app)
 
 	if magnet == nil || magnet.(map[string]any)["id"] == nil {
-		return item
+		return nil
 	}
 
 	magnetId := magnet.(map[string]any)["id"].(string)
@@ -184,16 +183,14 @@ func Unrestrict(item types.Torrent, app *pocketbase.PocketBase) types.Torrent {
 	info, _, _ := CallEndpoint("/torrents/info/"+magnetId, "GET", nil, app)
 
 	if info == nil {
-		return item
+		return nil
 	}
 
 	if info.(map[string]any)["links"] == nil {
-		return item
+		return nil
 	}
 
 	links := info.(map[string]any)["links"].([]any)
-
-	downloads := make([]map[string]any, 0)
 
 	for _, v := range links {
 		log.Debug("realdebrid unrestricted", "link", v.(string))
@@ -216,12 +213,11 @@ func Unrestrict(item types.Torrent, app *pocketbase.PocketBase) types.Torrent {
 
 		if !match && isVideo {
 			log.Debug("realdebrid unrestricted", "file", fname)
-			downloads = append(downloads, u.(map[string]any))
+			return u
 		}
 	}
 
-	item.RealDebrid = downloads
-	return item
+	return nil
 }
 
 func Cleanup(app *pocketbase.PocketBase) {

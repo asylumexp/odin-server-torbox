@@ -21,32 +21,41 @@
 			<div>
 				{streams.value[props.q].map((stream) => (
 					<div>
-						{(stream.realdebrid || []).map((s: any) => (
-							<div>
-								<p>
-									<span class={'badge mr-2 ' + badgeClass(props.q)}>{stream.quality}</span>
-									<span>
-										{stream.info.join(' | ')} | {humanFileSize(s.filesize)}
-									</span>
-									<br />
-									<span class="text-sm">{s.filename}</span>
-									<br />
-									<span class="btn btn-xs btn-secondary btn-outline mr-3" onClick={() => copyToClipbaord(s.download)}>
-										<FontAwesomeIcon icon="clipboard" class="mr-1" />
-										Copy to clipboard
-									</span>
-								</p>
+						<p>
+							<span class={'badge mr-2 ' + badgeClass(props.q)}>{stream.quality}</span>
+							<span>
+								{stream.info.join(' | ')} | {humanFileSize(stream.size)}
+							</span>
+							<br />
+							<span class="text-sm">{stream.name}</span>
+							<br />
+							<span class="btn btn-xs btn-secondary btn-outline mr-3" onClick={() => copyToClipbaord(stream.magnet)}>
+								<FontAwesomeIcon icon="clipboard" class="mr-1" />
+								Copy to clipboard
+							</span>
+						</p>
 
-								<div class="divider"></div>
-							</div>
-						))}
+						<div class="divider"></div>
 					</div>
 				))}
 			</div>
 		)
 
-	function copyToClipbaord(url: string) {
-		navigator.clipboard.writeText(url)
+	const unrestricted = ref<{ [m: string]: any }>({})
+	async function copyToClipbaord(magnet: string) {
+		let u = unrestricted.value[magnet]
+		console.log(u)
+		if (typeof u === 'undefined') {
+			u = await usePb().send('/unrestrict', {
+				method: 'POST',
+				body: {
+					magnet: magnet,
+				},
+			})
+		}
+
+		unrestricted.value[magnet] = u
+		navigator.clipboard.writeText(u['download'])
 	}
 
 	function badgeClass(q: string) {

@@ -259,6 +259,16 @@ func main() {
 			return c.JSON(http.StatusOK, res)
 		}, RequireDeviceOrRecordAuth(app))
 
+		e.Router.POST("/unrestrict", func(c echo.Context) error {
+			fmt.Println(c.PathParam("id"))
+			b := c.Request().Body
+			defer b.Close()
+			var data map[string]any
+			json.NewDecoder(b).Decode(&data)
+
+			return c.JSON(http.StatusOK, realdebrid.Unrestrict(data["magnet"].(string), app))
+		}, RequireDeviceOrRecordAuth(app))
+
 		return nil
 	})
 
