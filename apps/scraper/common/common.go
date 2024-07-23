@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"github.com/thoas/go-funk"
 )
 
@@ -98,7 +97,6 @@ func SeparateByQuality(torrents []Torrent, payload Payload) []Torrent {
 					res[t.Quality] = append([]Torrent{t}, res[t.Quality]...)
 					break
 				} else {
-					log.Debug(title)
 					res[t.Quality] = append(res[t.Quality], t)
 				}
 			}
@@ -115,27 +113,27 @@ func SeparateByQuality(torrents []Torrent, payload Payload) []Torrent {
 	// 	res["1080p"] = res["1080p"][:20]
 	// }
 
-	if len(res["720p"]) > 10 {
-		res["720p"] = res["720p"][:10]
-	}
+	// if len(res["720p"]) > 10 {
+	// 	res["720p"] = res["720p"][:10]
+	// }
 
-	if len(res["SD"]) > 10 {
-		res["SD"] = res["SD"][:10]
-	}
+	// if len(res["SD"]) > 10 {
+	// 	res["SD"] = res["SD"][:10]
+	// }
 
-	if len(res["4K"])+len(res["1080p"]) > 30 {
+	// if len(res["4K"])+len(res["1080p"]) > 30 {
 
-		res["720p"] = []Torrent{}
-		res["SD"] = []Torrent{}
-	}
+	// 	res["720p"] = []Torrent{}
+	// 	res["SD"] = []Torrent{}
+	// }
 
-	if len(res["4K"]) > 1 {
-		res["1080p"] = res["1080p"][:20]
-	}
+	// if len(res["4K"]) > 1 {
+	// 	res["1080p"] = res["1080p"][:20]
+	// }
 
-	if len(res["1080p"]) > 30 {
-		res["1080p"] = res["1080p"][:30]
-	}
+	// if len(res["1080p"]) > 30 {
+	// 	res["1080p"] = res["1080p"][:30]
+	// }
 
 	ret := append(res["4K"], res["1080p"]...)
 	ret = append(ret, res["720p"]...)
