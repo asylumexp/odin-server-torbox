@@ -217,7 +217,8 @@ func GetInfos(title string) ([]string, string) {
 		"DVDRIP": {"dvdrip", "dvd rip"},
 		"HDTV":   {"hdtv"},
 		"PDTV":   {"pdtv"},
-		"CAM": {
+		"CAMQUALITY": {
+
 			" cam ", "camrip", "cam rip",
 			"hdcam", "hd cam",
 			" ts ", " ts1", " ts7",
@@ -252,6 +253,11 @@ func GetInfos(title string) ([]string, string) {
 				res = append(res, baseInfo)
 				break
 			}
+
+			if strings.Contains(title, strings.ReplaceAll(strings.ToLower(info), " ", ".")) {
+				res = append(res, baseInfo)
+				break
+			}
 		}
 	}
 
@@ -280,6 +286,9 @@ func GetInfos(title string) ([]string, string) {
 	}
 	if funk.Contains(res, "4K") {
 		quality = "4K"
+	}
+	if funk.Contains(res, "CAMQUALITY") {
+		quality = "CAM"
 	}
 
 	return res, quality

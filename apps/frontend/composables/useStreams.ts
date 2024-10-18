@@ -24,6 +24,7 @@ type MovieStream = {
 	year: string
 	type: string
 }
+import mqtt from 'mqtt'
 
 type Stream = MovieStream | EpisodeStream
 
@@ -31,8 +32,31 @@ export const useStreams = defineStore('useStreams', () => {
 	const list = ref<{ [id: string]: [] }>({})
 
 	const data = ref<Stream>()
+	const streams = ref<any[]>([])
 
 	const videoUrl = ref('')
+	const mqttClient = mqtt.connect(useSettings().config?.mqtt.url, {
+		username: useSettings().config?.mqtt.user,
+		password: useSettings().config?.mqtt.pass,
+	})
+
+	mqttClient.on('connect', () => {
+		console.log('MQTT', mqttClient?.connected)
+	})
+	mqttClient.on('disconnect', () => {
+		console.log('MQTT', mqttClient?.connected)
+	})
+	// async function connect() {
+	// 	mqttClient = mqtt.connect(useSettings().config?.mqtt.url, {
+	// 		username: useSettings().config?.mqtt.user,
+	// 		password: useSettings().config?.mqtt.pass,
+	// 	})
+
+	// 	mqttClient.on('connect', () => {
+	// 		console.log('MQTT', mqttClient?.connected)
+	// 	})
+	// 	return mqttClient
+	// }
 
 	async function getStreams() {
 		if (!data.value) return []
@@ -55,6 +79,13 @@ export const useStreams = defineStore('useStreams', () => {
 	const triggerModal = ref(false)
 	const triggerVideoModal = ref(false)
 	const openModal = (item: any, show?: any, season?: string) => {
+		const topic = show ? `odin-movieshow/episode/${item.ids.trakt}` : `odin-movieshow/movie/${item.ids.trakt}`
+		mqttClient.subscribe(topic)
+		mqttClient.on('message', (topic: string, message: Buffer) => {
+			const m = JSON.parse(message.toString())
+			streams.value = [...streams.value, m]
+		})
+
 		data.value = {
 			type: 'movie',
 			trakt: `${item.ids.trakt}`,
@@ -95,5 +126,7 @@ export const useStreams = defineStore('useStreams', () => {
 		triggerVideoModal,
 		openVideoModal,
 		videoUrl,
+		mqttClient,
+		streams,
 	}
 })

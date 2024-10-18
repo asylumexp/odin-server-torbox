@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/odin-movieshow/server/types"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"
@@ -29,7 +30,6 @@ func ReadTmdbCache(app *pocketbase.PocketBase, id uint, resource string) interfa
 		FindFirstRecordByFilter("tmdb", "tmdb_id = {:id} && type = {:type}", dbx.Params{"id": id, "type": resource})
 	res := make(map[string]any)
 	if err == nil {
-		record.UnmarshalJSONField("data", &res)
 		err := record.UnmarshalJSONField("data", &res)
 		date := record.GetDateTime("updated")
 		now := time.Now()
@@ -80,6 +80,65 @@ func WriteTraktSeasonCache(app *pocketbase.PocketBase, id uint, data *interface{
 		app.Dao().SaveRecord(record)
 	}
 
+}
+
+func ReadRDCache(app *pocketbase.PocketBase, resource string, magnet string) *types.Torrent {
+	record, err := app.Dao().
+		FindFirstRecordByFilter("rd_resolved", "magnet = {:magnet}", dbx.Params{"magnet": magnet})
+	var res types.Torrent
+	if err == nil {
+		err := record.UnmarshalJSONField("data", &res)
+		date := record.GetDateTime("updated")
+		now := time.Now().Add(time.Duration((-2) * time.Hour))
+		if err == nil {
+			if date.Time().Before(now) {
+				return nil
+			}
+			log.Debug("cache hit", "for", "RD", "resource", resource)
+			return &res
+		}
+	}
+	return nil
+}
+
+func ReadRDCacheByResource(app *pocketbase.PocketBase, resource string) []types.Torrent {
+	records, err := app.Dao().FindRecordsByFilter("rd_resolved", "resource = {:resource}", "id", -1, 0, dbx.Params{"resource": resource})
+	res := make([]types.Torrent, 0)
+	if err == nil {
+		for _, record := range records {
+			var r types.Torrent
+			date := record.GetDateTime("updated")
+			now := time.Now().Add(time.Duration((-2) * time.Hour))
+			// add 1 hour to date
+			if date.Time().Before(now) {
+				continue
+			}
+			err := record.UnmarshalJSONField("data", &r)
+			if err == nil {
+				res = append(res, r)
+			}
+		}
+
+	}
+	return res
+}
+
+func WriteRDCache(app *pocketbase.PocketBase, resource string, magnet string, data interface{}) {
+	log.Info("cache write", "for", "RD", "resource", resource)
+	record, err := app.Dao().
+		FindFirstRecordByFilter("rd_resolved", "magnet = {:magnet}", dbx.Params{"magnet": magnet})
+
+	if err == nil {
+		record.Set("data", &data)
+		app.Dao().SaveRecord(record)
+	} else {
+		collection, _ := app.Dao().FindCollectionByNameOrId("rd_resolved")
+		record := models.NewRecord(collection)
+		record.Set("data", &data)
+		record.Set("magnet", magnet)
+		record.Set("resource", resource)
+		app.Dao().SaveRecord(record)
+	}
 }
 
 func ReadTraktSeasonCache(app *pocketbase.PocketBase, id uint) []any {

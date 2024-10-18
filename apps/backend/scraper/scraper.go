@@ -1,9 +1,12 @@
 package scraper
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/odin-movieshow/server/helpers"
 	"github.com/odin-movieshow/server/realdebrid"
 	"github.com/odin-movieshow/server/settings"
@@ -15,8 +18,29 @@ import (
 	"github.com/pocketbase/pocketbase"
 )
 
-func GetLinks(data map[string]any, app *pocketbase.PocketBase) []types.Torrent {
-	mux := sync.Mutex{}
+var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	fmt.Printf("TOPIC: %s\n", msg.Topic())
+	fmt.Printf("MSG: %s\n", msg.Payload())
+}
+
+func mqttclient() mqtt.Client {
+	// mqtt.DEBUG = log.New(os.Stdout, "", 0)
+	// mqtt.ERROR = log.New(os.Stdout, "", 0)
+	opts := mqtt.NewClientOptions().
+		AddBroker("wss://mqtt.dnmc.in/mqtt").
+		SetUsername("mqtt").
+		SetPassword("mqtt9040!")
+	opts.SetKeepAlive(2 * time.Second)
+	opts.SetDefaultPublishHandler(f)
+	opts.SetPingTimeout(1 * time.Second)
+
+	c := mqtt.NewClient(opts)
+
+	return c
+}
+
+func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqtt mqtt.Client) []types.Torrent {
+	// mux := sync.Mutex{}
 	j := settings.GetJackett(app)
 
 	if j == nil {
@@ -25,6 +49,21 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase) []types.Torrent {
 	}
 
 	allTorrents := []types.Torrent{}
+
+	topic := "odin-movieshow/" + data["type"].(string)
+	if data["episode_trakt"] != nil {
+		topic = topic + "/" + data["episode_trakt"].(string)
+	}
+	if data["trakt"] != nil {
+		topic = topic + "/" + data["trakt"].(string)
+	}
+
+	log.Info(topic)
+	allTorrentsUnrestricted := helpers.ReadRDCacheByResource(app, topic)
+	for _, u := range allTorrentsUnrestricted {
+		cstr, _ := json.Marshal(u)
+		mqtt.Publish(topic, 0, false, cstr)
+	}
 
 	res := resty.New().
 		R().
@@ -40,7 +79,7 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase) []types.Torrent {
 
 	wg := sync.WaitGroup{}
 	chunks := helpers.Chunk(allTorrents)
-	allTorrentsUnrestricted := []types.Torrent{}
+
 	for _, c := range chunks {
 		wg.Add(1)
 		go func(torrents []types.Torrent) {
@@ -85,12 +124,24 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase) []types.Torrent {
 						continue
 					}
 				}
-				mux.Lock()
-				allTorrentsUnrestricted = append(
-					allTorrentsUnrestricted,
-					realdebrid.Unrestrict(k, app),
-				)
-				mux.Unlock()
+
+				cache := helpers.ReadRDCache(app, topic, k.Magnet)
+				if cache != nil {
+					// allTorrentsUnrestricted = append(allTorrentsUnrestricted, *cache)
+					// cstr, _ := json.Marshal(cache)
+					// mqtt.Publish(topic, 0, false, cstr)
+					continue
+				}
+
+				nk := realdebrid.Unrestrict(k, app)
+				allTorrentsUnrestricted = append(allTorrentsUnrestricted, nk)
+
+				if len(nk.RealDebrid) > 0 {
+					helpers.WriteRDCache(app, topic, nk.Magnet, nk)
+					kstr, _ := json.Marshal(nk)
+					mqtt.Publish(topic, 0, false, kstr)
+				}
+				// mux.Unlock()
 			}
 		}(c)
 

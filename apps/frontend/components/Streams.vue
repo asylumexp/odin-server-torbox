@@ -93,6 +93,13 @@
 	})
 
 	watch(
+		() => useStreams().streams,
+		() => {
+			data.value = useStreams().streams
+		}
+	)
+
+	watch(
 		() => useStreams().triggerModal,
 		async () => {
 			streams_dialog.value?.showModal()

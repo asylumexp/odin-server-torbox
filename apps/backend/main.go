@@ -3,12 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	stdlog "log"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/log"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/getsentry/sentry-go"
 	"github.com/joho/godotenv"
 	"github.com/odin-movieshow/server/helpers"
@@ -18,7 +21,6 @@ import (
 	"github.com/odin-movieshow/server/tmdb"
 	"github.com/odin-movieshow/server/trakt"
 
-	"github.com/charmbracelet/log"
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -28,6 +30,32 @@ import (
 	"github.com/pocketbase/pocketbase/tools/cron"
 	"github.com/thoas/go-funk"
 )
+
+var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	fmt.Printf("TOPIC: %s\n", msg.Topic())
+	fmt.Printf("MSG: %s\n", msg.Payload())
+}
+
+func mqttclient() mqtt.Client {
+	// mqtt.DEBUG = stdlog.New(os.Stdout, "", 0)
+	mqtt.ERROR = stdlog.New(os.Stdout, "", 0)
+	opts := mqtt.NewClientOptions().
+		AddBroker(os.Getenv("MQTT_URL")).
+		SetUsername(os.Getenv("MQTT_USER")).
+		SetPassword(os.Getenv("MQTT_PASSWORD"))
+	opts.SetKeepAlive(2 * time.Second)
+	opts.SetDefaultPublishHandler(f)
+	opts.SetPingTimeout(1 * time.Second)
+
+	c := mqtt.NewClient(opts)
+	if token := c.Connect(); token.Wait() && token.Error() != nil {
+		log.Error("MQTT", "conneced", c.IsConnected())
+	} else {
+		log.Info("MQTT", "connected", c.IsConnected(), "url", os.Getenv("MQTT_URL"))
+	}
+
+	return c
+}
 
 func getDevice(app *pocketbase.PocketBase, c echo.Context) (*models.Record, error) {
 	device := c.Request().Header.Get("Device")
@@ -64,6 +92,7 @@ func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 
 func main() {
 	godotenv.Load()
+
 	log.SetReportCaller(true)
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn: "https://308c965810583274884cbc87d1a584de@sentry.dnmc.in/4",
@@ -124,10 +153,15 @@ func main() {
 		go func() {
 		}()
 
+		// a, _ := app.Dao().FindAdminByEmail("admin@odin.local")
+		// a.SetPassword("adminOdin1")
+		// app.Dao().SaveAdmin(a)
+
+		mq := mqttclient()
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
 		e.Router.POST("/scrape", func(c echo.Context) error {
 			log.Debug("Scraping")
-			data := scraper.GetLinks(apis.RequestInfo(c).Data, app)
+			data := scraper.GetLinks(apis.RequestInfo(c).Data, app, mq)
 			return c.JSON(http.StatusOK, data)
 		}, RequireDeviceOrRecordAuth(app))
 
