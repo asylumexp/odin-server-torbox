@@ -186,6 +186,18 @@ func main() {
 			return c.JSON(http.StatusOK, map[string]any{"url": os.Getenv("BACKEND_URL")})
 		}, RequireDeviceOrRecordAuth(app))
 
+		e.Router.GET("/mqttconfig", func(c echo.Context) error {
+			return c.JSON(
+				http.StatusOK,
+				map[string]any{
+					"url":      os.Getenv("MQTT_URL"),
+					"user":     os.Getenv("MQTT_USER"),
+					"password": os.Getenv("MQTT_PASSWORD"),
+					"port":     443,
+				},
+			)
+		}, RequireDeviceOrRecordAuth(app))
+
 		e.Router.GET("/user", func(c echo.Context) error {
 			u := c.Get("authRecord")
 			sections := make(map[string]any)

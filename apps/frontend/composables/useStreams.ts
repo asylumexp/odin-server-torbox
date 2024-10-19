@@ -33,6 +33,7 @@ export const useStreams = defineStore('useStreams', () => {
 
 	const data = ref<Stream>()
 	const streams = ref<any[]>([])
+	const topic = ref('')
 
 	const videoUrl = ref('')
 	const mqttClient = mqtt.connect(useSettings().config?.mqtt.url, {
@@ -59,13 +60,24 @@ export const useStreams = defineStore('useStreams', () => {
 	// }
 
 	async function getStreams() {
+		streams.value = []
 		if (!data.value) return []
 		let id = ''
 		if (data.value.type === 'movie') {
 			id = `${(data.value as MovieStream).title}-${(data.value as MovieStream).year}`
+			topic.value = `odin-movieshow/movie/${(data.value as MovieStream).trakt}`
 		} else {
 			id = `${(data.value as EpisodeStream).show_title}-${(data.value as EpisodeStream).season_number}-${(data.value as EpisodeStream).episode_number}`
+			topic.value = `odin-movieshow/episode/${(data.value as EpisodeStream).episode_trakt}`
 		}
+
+		console.log('TOPIC', topic.value)
+		mqttClient.subscribe(topic.value)
+		mqttClient.on('message', (topic: string, message: Buffer) => {
+			const m = JSON.parse(message.toString())
+			streams.value = [...streams.value, m]
+		})
+
 		if (!list.value[id]) {
 			list.value[id] = await usePb().send('scrape', {
 				method: 'POST',
@@ -79,13 +91,6 @@ export const useStreams = defineStore('useStreams', () => {
 	const triggerModal = ref(false)
 	const triggerVideoModal = ref(false)
 	const openModal = (item: any, show?: any, season?: string) => {
-		const topic = show ? `odin-movieshow/episode/${item.ids.trakt}` : `odin-movieshow/movie/${item.ids.trakt}`
-		mqttClient.subscribe(topic)
-		mqttClient.on('message', (topic: string, message: Buffer) => {
-			const m = JSON.parse(message.toString())
-			streams.value = [...streams.value, m]
-		})
-
 		data.value = {
 			type: 'movie',
 			trakt: `${item.ids.trakt}`,
@@ -128,5 +133,6 @@ export const useStreams = defineStore('useStreams', () => {
 		videoUrl,
 		mqttClient,
 		streams,
+		topic,
 	}
 })

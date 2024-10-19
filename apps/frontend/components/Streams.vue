@@ -1,5 +1,5 @@
 <template>
-	<dialog ref="streams_dialog" class="modal">
+	<dialog ref="streams_dialog" class="modal" @close="dialogGone">
 		<div class="modal-box min-w-max">
 			<h3 class="m-0">Streams</h3>
 			<StreamList q="4K" />
@@ -102,9 +102,13 @@
 	watch(
 		() => useStreams().triggerModal,
 		async () => {
+			console.log('dialog open')
 			streams_dialog.value?.showModal()
-
 			data.value = (await useStreams().getStreams()) || []
 		}
 	)
+
+	async function dialogGone() {
+		useStreams().mqttClient.unsubscribe(useStreams().topic)
+	}
 </script>
