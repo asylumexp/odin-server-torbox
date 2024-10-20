@@ -3,7 +3,6 @@ package scraper
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/odin-movieshow/server/helpers"
@@ -17,28 +16,7 @@ import (
 	"github.com/pocketbase/pocketbase"
 )
 
-var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("TOPIC: %s\n", msg.Topic())
-	fmt.Printf("MSG: %s\n", msg.Payload())
-}
-
-func mqttclient() mqtt.Client {
-	// mqtt.DEBUG = log.New(os.Stdout, "", 0)
-	// mqtt.ERROR = log.New(os.Stdout, "", 0)
-	opts := mqtt.NewClientOptions().
-		AddBroker("wss://mqtt.dnmc.in/mqtt").
-		SetUsername("mqtt").
-		SetPassword("mqtt9040!")
-	opts.SetKeepAlive(2 * time.Second)
-	opts.SetDefaultPublishHandler(f)
-	opts.SetPingTimeout(1 * time.Second)
-
-	c := mqtt.NewClient(opts)
-
-	return c
-}
-
-func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqtt mqtt.Client) []types.Torrent {
+func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) []types.Torrent {
 	// mux := sync.Mutex{}
 	j := settings.GetJackett(app)
 
@@ -50,19 +28,31 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqtt mqtt.Client)
 	allTorrents := []types.Torrent{}
 
 	topic := "odin-movieshow/" + data["type"].(string)
+	indexertopic := "odin-movieshow/indexer/" + data["type"].(string)
 	if data["episode_trakt"] != nil {
 		topic = topic + "/" + data["episode_trakt"].(string)
+		indexertopic = indexertopic + "/" + data["episode_trakt"].(string)
 	}
 	if data["trakt"] != nil {
 		topic = topic + "/" + data["trakt"].(string)
+		indexertopic = indexertopic + "/" + data["trakt"].(string)
 	}
 
 	log.Info(topic)
+	log.Info(indexertopic)
 	allTorrentsUnrestricted := helpers.ReadRDCacheByResource(app, topic)
 	for _, u := range allTorrentsUnrestricted {
 		cstr, _ := json.Marshal(u)
-		mqtt.Publish(topic, 0, false, cstr)
+		mqt.Publish(topic, 0, false, cstr)
 	}
+
+	// if token := mqt.Subscribe(indexertopic, 0, func(client mqtt.Client, msg mqtt.Message) {
+	// 	log.Info(msg.Topic())
+	// 	// fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+	// }); token.Wait() &&
+	// 	token.Error() != nil {
+	// 	log.Error("mqtt-subscribe-indexer", "error", token.Error())
+	// }
 
 	res := resty.New().
 		R().
@@ -132,7 +122,7 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqtt mqtt.Client)
 			allTorrentsUnrestricted = append(allTorrentsUnrestricted, k)
 			helpers.WriteRDCache(app, topic, k.Magnet, k)
 			kstr, _ := json.Marshal(k)
-			mqtt.Publish(topic, 0, false, kstr)
+			mqt.Publish(topic, 0, false, kstr)
 		}
 		// mux.Unlock()
 	}

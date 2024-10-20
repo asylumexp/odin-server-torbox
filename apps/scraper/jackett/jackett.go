@@ -1,6 +1,7 @@
 package jackett
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"net/url"
@@ -66,6 +67,9 @@ func (indexer *Indexer) HasTvParam(param string) bool {
 }
 
 func Search(c *fiber.Ctx) error {
+
+	mq := common.Mqttclient()
+
 	payload := common.Payload{}
 
 	if err := c.BodyParser(&payload); err != nil {
@@ -101,6 +105,16 @@ func Search(c *fiber.Ctx) error {
 				"took",
 				fmt.Sprintf("%.1fs", t2.Sub(t1).Seconds()),
 			)
+			log.Info("odin-movieshow/indexer/" + payload.Type + "/" + payload.Trakt)
+			if ts != nil {
+				tsstr, _ := json.Marshal(ts)
+				mq.Publish(
+					"odin-movieshow/indexer/"+payload.Type+"/"+payload.Trakt,
+					0,
+					false,
+					tsstr,
+				)
+			}
 			allTorrents = append(allTorrents, ts...)
 		}(indexer)
 	}

@@ -31,11 +31,6 @@ import (
 	"github.com/thoas/go-funk"
 )
 
-var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("TOPIC: %s\n", msg.Topic())
-	fmt.Printf("MSG: %s\n", msg.Payload())
-}
-
 func mqttclient() mqtt.Client {
 	// mqtt.DEBUG = stdlog.New(os.Stdout, "", 0)
 	mqtt.ERROR = stdlog.New(os.Stdout, "", 0)
@@ -44,7 +39,6 @@ func mqttclient() mqtt.Client {
 		SetUsername(os.Getenv("MQTT_USER")).
 		SetPassword(os.Getenv("MQTT_PASSWORD"))
 	opts.SetKeepAlive(2 * time.Second)
-	opts.SetDefaultPublishHandler(f)
 	opts.SetPingTimeout(1 * time.Second)
 
 	c := mqtt.NewClient(opts)

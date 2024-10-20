@@ -1,11 +1,9 @@
 package main
 
 import (
-	"net/url"
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/odin-movieshow/scraper/common"
 	"github.com/odin-movieshow/scraper/jackett"
 
 	"github.com/charmbracelet/log"
@@ -17,9 +15,6 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 	jackettUrl := os.Getenv("JACKETT_URL")
 	jackettKey := os.Getenv("JACKETT_KEY")
-
-	log.Info(url.QueryEscape((common.Strip("Test thi's shit"))))
-
 	if jackettUrl == "" || jackettKey == "" {
 		log.Error("missing env vars JACKETT_URL and JACKETT_KEY")
 		os.Exit(0)
