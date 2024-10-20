@@ -72,9 +72,9 @@ func Search(c *fiber.Ctx) error {
 		return err
 	}
 
-	payload.Title = url.QueryEscape(payload.Title)
-	payload.EpisodeTitle = url.QueryEscape(payload.EpisodeTitle)
-	payload.ShowTitle = url.QueryEscape(payload.ShowTitle)
+	payload.Title = url.QueryEscape(common.Strip(payload.Title))
+	payload.EpisodeTitle = url.QueryEscape(common.Strip(payload.EpisodeTitle))
+	payload.ShowTitle = url.QueryEscape(common.Strip(payload.ShowTitle))
 
 	log.Info(payload)
 
@@ -171,6 +171,7 @@ func getTorrents(indexer Indexer, payload common.Payload) []common.Torrent {
 	imdbid := ""
 	tvdbid := ""
 	tmdbid := ""
+
 	if indexer.SearchAvailable() {
 		q = payload.Title + "+" + payload.Year
 		if payload.Type == "episode" {

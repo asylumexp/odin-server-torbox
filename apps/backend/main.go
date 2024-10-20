@@ -153,9 +153,9 @@ func main() {
 		go func() {
 		}()
 
-		// a, _ := app.Dao().FindAdminByEmail("admin@odin.local")
-		// a.SetPassword("adminOdin1")
-		// app.Dao().SaveAdmin(a)
+		a, _ := app.Dao().FindAdminByEmail("admin@odin.local")
+		a.SetPassword("adminOdin1")
+		app.Dao().SaveAdmin(a)
 
 		mq := mqttclient()
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))

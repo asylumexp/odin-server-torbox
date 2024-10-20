@@ -47,17 +47,6 @@ export const useStreams = defineStore('useStreams', () => {
 	mqttClient.on('disconnect', () => {
 		console.log('MQTT', mqttClient?.connected)
 	})
-	// async function connect() {
-	// 	mqttClient = mqtt.connect(useSettings().config?.mqtt.url, {
-	// 		username: useSettings().config?.mqtt.user,
-	// 		password: useSettings().config?.mqtt.pass,
-	// 	})
-
-	// 	mqttClient.on('connect', () => {
-	// 		console.log('MQTT', mqttClient?.connected)
-	// 	})
-	// 	return mqttClient
-	// }
 
 	async function getStreams() {
 		streams.value = []
