@@ -3,7 +3,6 @@ package scraper
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -77,83 +76,77 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqtt mqtt.Client)
 		return []types.Torrent{}
 	}
 
-	wg := sync.WaitGroup{}
-	chunks := helpers.Chunk(allTorrents)
+	for _, k := range allTorrents {
 
-	for _, c := range chunks {
-		wg.Add(1)
-		go func(torrents []types.Torrent) {
-			defer wg.Done()
-			for _, k := range torrents {
+		q1s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
+			return t.Quality == "4K" && len(t.RealDebrid) > 0
+		}).([]types.Torrent)
 
-				q1s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
-					return t.Quality == "4K" && len(t.RealDebrid) > 0
-				}).([]types.Torrent)
+		q2s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
+			return t.Quality == "1080p" && len(t.RealDebrid) > 0
+		}).([]types.Torrent)
 
-				q2s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
-					return t.Quality == "1080p" && len(t.RealDebrid) > 0
-				}).([]types.Torrent)
+		q3s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
+			return t.Quality == "720p" && len(t.RealDebrid) > 0
+		}).([]types.Torrent)
 
-				q3s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
-					return t.Quality == "720p" && len(t.RealDebrid) > 0
-				}).([]types.Torrent)
+		q4s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
+			return t.Quality == "SD" && len(t.RealDebrid) > 0
+		}).([]types.Torrent)
 
-				q4s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
-					return t.Quality == "SD" && len(t.RealDebrid) > 0
-				}).([]types.Torrent)
-
-				if k.Quality == "1080p" {
-					if len(q2s) > 20 {
-						continue
-					}
-				}
-
-				if k.Quality == "720p" {
-					if len(q1s)+len(q2s) > 30 {
-						continue
-					}
-					if len(q3s) > 10 {
-						continue
-					}
-				}
-				if k.Quality == "SD" {
-					if len(q1s)+len(q2s) > 30 {
-						continue
-					}
-					if len(q4s) > 10 {
-						continue
-					}
-				}
-
-				cache := helpers.ReadRDCache(app, topic, k.Magnet)
-				if cache != nil {
-					// allTorrentsUnrestricted = append(allTorrentsUnrestricted, *cache)
-					// cstr, _ := json.Marshal(cache)
-					// mqtt.Publish(topic, 0, false, cstr)
-					continue
-				}
-
-				nk := realdebrid.Unrestrict(k, app)
-				allTorrentsUnrestricted = append(allTorrentsUnrestricted, nk)
-
-				if len(nk.RealDebrid) > 0 {
-					helpers.WriteRDCache(app, topic, nk.Magnet, nk)
-					kstr, _ := json.Marshal(nk)
-					mqtt.Publish(topic, 0, false, kstr)
-				}
-				// mux.Unlock()
+		if k.Quality == "1080p" {
+			if len(q2s) > 20 {
+				continue
 			}
-		}(c)
-
-	}
-	wg.Wait()
-
-	filtered := []types.Torrent{}
-	for _, t := range allTorrentsUnrestricted {
-		if len(t.RealDebrid) > 0 {
-			filtered = append(filtered, t)
 		}
+
+		if k.Quality == "720p" {
+			if len(q1s)+len(q2s) > 30 {
+				continue
+			}
+			if len(q3s) > 10 {
+				continue
+			}
+		}
+		if k.Quality == "SD" {
+			if len(q1s)+len(q2s) > 30 {
+				continue
+			}
+			if len(q4s) > 10 {
+				continue
+			}
+		}
+
+		cache := helpers.ReadRDCache(app, topic, k.Magnet)
+		if cache != nil {
+			// allTorrentsUnrestricted = append(allTorrentsUnrestricted, *cache)
+			// cstr, _ := json.Marshal(cache)
+			// mqtt.Publish(topic, 0, false, cstr)
+			continue
+		}
+
+		u := realdebrid.Unrestrict(k.Magnet, app)
+		k.RealDebrid = append(k.RealDebrid, u)
+
+		if len(k.RealDebrid) > 0 {
+			allTorrentsUnrestricted = append(allTorrentsUnrestricted, k)
+			helpers.WriteRDCache(app, topic, k.Magnet, k)
+			kstr, _ := json.Marshal(k)
+			mqtt.Publish(topic, 0, false, kstr)
+		}
+		// mux.Unlock()
 	}
-	log.Info("scrape done", "unrestricted", len(filtered))
-	return filtered
+
+	// }
+	// wg.Wait()
+
+	// filtered := []types.Torrent{}
+	// for _, t := range allTorrentsUnrestricted {
+	// 	if len(t.RealDebrid) > 0 {
+	// 		filtered = append(filtered, t)
+	// 	}
+	// }
+	// log.Info("scrape done", "unrestricted", len(filtered))
+
+	return allTorrentsUnrestricted
 }
