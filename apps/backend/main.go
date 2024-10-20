@@ -151,11 +151,12 @@ func main() {
 		a.SetPassword("adminOdin1")
 		app.Dao().SaveAdmin(a)
 
-		mq := mqttclient()
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
 		e.Router.POST("/scrape", func(c echo.Context) error {
+			mq := mqttclient()
 			log.Debug("Scraping")
 			data := scraper.GetLinks(apis.RequestInfo(c).Data, app, mq)
+			mq.Disconnect(0)
 			return c.JSON(http.StatusOK, data)
 		}, RequireDeviceOrRecordAuth(app))
 
