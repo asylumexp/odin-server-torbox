@@ -130,6 +130,23 @@ func main() {
 	// serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 
+		email := "admin@odin.local"
+		if os.Getenv("ADMIN_EMAIL") != "" {
+			email = os.Getenv("ADMIN_EMAIL")
+		}
+		password := "adminOdin1"
+		if os.Getenv("ADMIN_PASSWORD") != "" {
+			password = os.Getenv("ADMIN_PASSWORD")
+		}
+		a, _ := app.Dao().FindAdminByEmail(email)
+		if a != nil {
+			a.SetPassword(password)
+		} else {
+			a = &models.Admin{Email: email}
+		}
+		a.SetPassword(password)
+		app.Dao().SaveAdmin(a)
+
 		scheduler := cron.New()
 		scheduler.MustAdd("hourly", "0 * * * *", func() {
 			trakt.RefreshTokens(app)
@@ -146,10 +163,6 @@ func main() {
 
 		go func() {
 		}()
-
-		a, _ := app.Dao().FindAdminByEmail("admin@odin.local")
-		a.SetPassword("adminOdin1")
-		app.Dao().SaveAdmin(a)
 
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
 		e.Router.POST("/scrape", func(c echo.Context) error {
