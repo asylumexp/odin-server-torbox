@@ -48,7 +48,6 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) 
 	if token := mqt.Subscribe(indexertopic, 0, func(client mqtt.Client, msg mqtt.Message) {
 		newTorrents := []types.Torrent{}
 		json.Unmarshal(msg.Payload(), &newTorrents)
-		log.Warn("NewTorrents", "length", len(newTorrents))
 		go func() {
 			for _, t := range newTorrents {
 				if t.Magnet != "" {
@@ -74,7 +73,8 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) 
 		for {
 			select {
 			case k := <-torrentQueue:
-				if !funk.Contains(done, k.Magnet) {
+				if !funk.Contains(done, k.Magnet) && k.Quality != "720" && k.Quality != "SD" &&
+					k.Quality != "CAM" {
 					unrestrict(k, app, mqt, topic)
 					done = append(done, k.Magnet)
 				}
@@ -166,8 +166,11 @@ func unrestrict(k types.Torrent, app *pocketbase.PocketBase, mqt mqtt.Client, to
 	}
 
 	u := realdebrid.Unrestrict(k.Magnet, app)
+	if u == nil || len(u) == 0 {
+		return
+	}
 	k.RealDebrid = append(k.RealDebrid, u)
-
+	log.Warn(k.ReleaseTitle)
 	if len(k.RealDebrid) > 0 {
 		helpers.WriteRDCache(app, topic, k.Magnet, k)
 		kstr, _ := json.Marshal(k)
