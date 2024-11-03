@@ -73,7 +73,7 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) 
 		for {
 			select {
 			case k := <-torrentQueue:
-				if !funk.Contains(done, k.Magnet) && k.Quality != "720" && k.Quality != "SD" &&
+				if !funk.Contains(done, k.Magnet) && k.Quality != "720p" && k.Quality != "SD" &&
 					k.Quality != "CAM" {
 					unrestrict(k, app, mqt, topic)
 					done = append(done, k.Magnet)
