@@ -410,18 +410,32 @@ func GetWatched(objmap []any, app *pocketbase.PocketBase) []any {
 
 }
 
+func getHistory(app *pocketbase.PocketBase, htype string) []any {
+	records, _ := app.Dao().FindRecordsByFilter("history", "type = {:htype}", "-watched_at", -1, 0, dbx.Params{"htype": htype})
+	data := make([]any, 0)
+	for _, r := range records {
+		item := make(map[string]any)
+		item["type"] = r.Get("type")
+		item["trakt_id"] = r.Get("trakt_id")
+		data = append(data, item)
+	}
+	return data
+}
+
 func GetWatchedCalendarEpisodes(objmap []any, app *pocketbase.PocketBase) []any {
+	history := getHistory(app, "episode")
 	for i := range objmap {
 		tvshow := objmap[i].(map[string]any)["show"].(map[string]any)
 		episode := objmap[i].(map[string]any)["episode"]
-		// handle calendars/tvshow episodes
 		if tvshow != nil && episode != nil {
 			episode.(map[string]any)["watched"] = false
 			tvshow["watched"] = false
-			r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", episode.(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
-			if r != nil {
-				episode.(map[string]any)["watched"] = true
-				tvshow["watched"] = true
+			for _, h := range history {
+				if h.(map[string]any)["trakt_id"] == episode.(map[string]any)["ids"].(map[string]any)["trakt"] {
+					episode.(map[string]any)["watched"] = true
+					tvshow["watched"] = true
+					break
+				}
 			}
 
 		}
@@ -436,12 +450,16 @@ func GetWatchedCalendarEpisodes(objmap []any, app *pocketbase.PocketBase) []any 
 }
 
 func GetWatchedMovies(objmap []any, app *pocketbase.PocketBase) []any {
+	history := getHistory(app, "movie")
 	for i, o := range objmap {
 		objmap[i].(map[string]any)["movie"].(map[string]any)["watched"] = false
-		r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", o.(map[string]any)["movie"].(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
-		if r != nil {
-			objmap[i].(map[string]any)["movie"].(map[string]any)["watched"] = true
+		for _, h := range history {
+			if h.(map[string]any)["trakt_id"] == o.(map[string]any)["movie"].(map[string]any)["ids"].(map[string]any)["trakt"] {
+				objmap[i].(map[string]any)["movie"].(map[string]any)["watched"] = true
+				break
+			}
 		}
+
 	}
 	newmap := make([]any, 0)
 
@@ -453,12 +471,15 @@ func GetWatchedMovies(objmap []any, app *pocketbase.PocketBase) []any {
 }
 
 func GetWatchedSeasonEpisodes(objmap []any, app *pocketbase.PocketBase) []any {
+	history := getHistory(app, "episode")
 	for _, oseason := range objmap {
 		for _, oepisode := range oseason.(map[string]any)["episodes"].([]any) {
 			oepisode.(map[string]any)["watched"] = false
-			r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", oepisode.(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
-			if r != nil {
-				oepisode.(map[string]any)["watched"] = true
+			for _, h := range history {
+				if h.(map[string]any)["trakt_id"] == oepisode.(map[string]any)["ids"].(map[string]any)["trakt"] {
+					oepisode.(map[string]any)["watched"] = true
+					break
+				}
 			}
 		}
 	}
