@@ -70,6 +70,7 @@ type Payload struct {
 	EpisodeTvdb   string `json:"episode_tvdb"`
 	EpisodeTitle  string `json:"episode_title"`
 	EpisodeNumber string `json:"episode_number"`
+	EpisodeTrakt  string `json:"episode_trakt"`
 }
 
 func SeparateByQuality(torrents []Torrent, payload Payload) []Torrent {

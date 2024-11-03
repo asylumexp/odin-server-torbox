@@ -155,9 +155,9 @@ func main() {
 		e.Router.POST("/scrape", func(c echo.Context) error {
 			mq := mqttclient()
 			log.Debug("Scraping")
-			data := scraper.GetLinks(apis.RequestInfo(c).Data, app, mq)
+			scraper.GetLinks(apis.RequestInfo(c).Data, app, mq)
 			mq.Disconnect(0)
-			return c.JSON(http.StatusOK, data)
+			return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 		}, RequireDeviceOrRecordAuth(app))
 
 		e.Router.GET("/imdb/:id", func(c echo.Context) error {
@@ -305,16 +305,6 @@ func main() {
 			seasons := c.QueryParam("seasons")
 			res := tmdb.GetEpisodes(c.PathParam("id"), strings.Split(seasons, ","), app)
 			return c.JSON(http.StatusOK, res)
-		}, RequireDeviceOrRecordAuth(app))
-
-		e.Router.POST("/unrestrict", func(c echo.Context) error {
-			fmt.Println(c.PathParam("id"))
-			b := c.Request().Body
-			defer b.Close()
-			var data map[string]any
-			json.NewDecoder(b).Decode(&data)
-
-			return c.JSON(http.StatusOK, realdebrid.Unrestrict(data["magnet"].(string), app))
 		}, RequireDeviceOrRecordAuth(app))
 
 		return nil

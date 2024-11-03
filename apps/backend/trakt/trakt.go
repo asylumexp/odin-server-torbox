@@ -360,19 +360,6 @@ func getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.
 	}
 }
 
-func getSeasons(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {
-	if len(objmap) == 0 {
-		return
-	}
-	if objmap[0].(map[string]any)["show"] != nil {
-
-		for k := range objmap {
-			wg.Add(1)
-			go PopulateSeasons(k, wg, mux, objmap, app)
-		}
-	}
-}
-
 type Watched struct {
 	Plays         int       `json:"plays"`
 	LastWatchedAt time.Time `json:"last_watched_at"`
@@ -412,50 +399,33 @@ type Watched struct {
 
 func GetWatched(objmap []any, app *pocketbase.PocketBase) []any {
 
-	obj := "movie"
 	if len(objmap) == 0 {
 		return objmap
 	}
 	if objmap[0].(map[string]any)["show"] != nil {
-		obj = "show"
+		return GetWatchedCalendarEpisodes(objmap, app)
 	}
 
-	for i, o := range objmap {
-		if obj == "movie" {
-			objmap[i].(map[string]any)[obj].(map[string]any)["watched"] = false
-			r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", o.(map[string]any)[obj].(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
+	return GetWatchedMovies(objmap, app)
+
+}
+
+func GetWatchedCalendarEpisodes(objmap []any, app *pocketbase.PocketBase) []any {
+	for i := range objmap {
+		tvshow := objmap[i].(map[string]any)["show"].(map[string]any)
+		episode := objmap[i].(map[string]any)["episode"]
+		// handle calendars/tvshow episodes
+		if tvshow != nil && episode != nil {
+			episode.(map[string]any)["watched"] = false
+			tvshow["watched"] = false
+			r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", episode.(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
 			if r != nil {
-				objmap[i].(map[string]any)[obj].(map[string]any)["watched"] = true
+				episode.(map[string]any)["watched"] = true
+				tvshow["watched"] = true
 			}
 
-		} else {
-			tvshow := objmap[i].(map[string]any)[obj].(map[string]any)
-			episode := objmap[i].(map[string]any)["episode"]
-			// handle calendars/tvshow episodes
-			if tvshow != nil && episode != nil {
-				episode.(map[string]any)["watched"] = false
-				tvshow["watched"] = false
-				r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", episode.(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
-				if r != nil {
-					episode.(map[string]any)["watched"] = true
-					tvshow["watched"] = true
-				}
-
-			}
-			if tvshow["seasons"] != nil {
-				for _, oseason := range tvshow["seasons"].([]any) {
-					for _, oepisode := range oseason.(map[string]any)["episodes"].([]any) {
-						oepisode.(map[string]any)["watched"] = false
-						r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", oepisode.(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
-						if r != nil {
-							oepisode.(map[string]any)["watched"] = true
-						}
-					}
-				}
-			}
 		}
 	}
-
 	newmap := make([]any, 0)
 
 	for _, o := range objmap {
@@ -463,42 +433,55 @@ func GetWatched(objmap []any, app *pocketbase.PocketBase) []any {
 	}
 
 	return newmap
+}
+
+func GetWatchedMovies(objmap []any, app *pocketbase.PocketBase) []any {
+	for i, o := range objmap {
+		objmap[i].(map[string]any)["movie"].(map[string]any)["watched"] = false
+		r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", o.(map[string]any)["movie"].(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
+		if r != nil {
+			objmap[i].(map[string]any)["movie"].(map[string]any)["watched"] = true
+		}
+	}
+	newmap := make([]any, 0)
+
+	for _, o := range objmap {
+		newmap = append(newmap, o)
+	}
+
+	return newmap
+}
+
+func GetWatchedSeasonEpisodes(objmap []any, app *pocketbase.PocketBase) []any {
+	for _, oseason := range objmap {
+		for _, oepisode := range oseason.(map[string]any)["episodes"].([]any) {
+			oepisode.(map[string]any)["watched"] = false
+			r, _ := app.Dao().FindFirstRecordByData("history", "trakt_id", oepisode.(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
+			if r != nil {
+				oepisode.(map[string]any)["watched"] = true
+			}
+		}
+	}
+	newmap := make([]any, 0)
+	for _, o := range objmap {
+		newmap = append(newmap, o)
+	}
+	return newmap
 
 }
+
 func GetSeasons(app *pocketbase.PocketBase, id int) any {
-	// defer mux.Unlock()
-	// mux.Lock()
+
 	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
 
 	cache := helpers.ReadTraktSeasonCache(app, uint(id))
 	if cache != nil {
-		return cache
+		return GetWatchedSeasonEpisodes(cache, app)
 	}
 
 	result, _, _ := CallEndpoint(endpoint, "GET", nil, false, app)
 
 	helpers.WriteTraktSeasonCache(app, uint(id), &result)
 
-	return result
-}
-
-func PopulateSeasons(k int, wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {
-	defer wg.Done()
-	// defer mux.Unlock()
-	// mux.Lock()
-	id :=
-		int(objmap[k].(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"].(float64))
-	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
-
-	cache := helpers.ReadTraktSeasonCache(app, uint(id))
-	if cache != nil {
-		objmap[k].(map[string]any)["show"].(map[string]any)["seasons"] = cache
-		return
-	}
-
-	result, _, _ := CallEndpoint(endpoint, "GET", nil, false, app)
-
-	helpers.WriteTraktSeasonCache(app, uint(id), &result)
-
-	objmap[k].(map[string]any)["show"].(map[string]any)["seasons"] = result
+	return GetWatchedSeasonEpisodes(result.([]any), app)
 }

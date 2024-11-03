@@ -80,8 +80,6 @@ func Search(c *fiber.Ctx) error {
 	payload.EpisodeTitle = url.QueryEscape(common.Strip(payload.EpisodeTitle))
 	payload.ShowTitle = url.QueryEscape(common.Strip(payload.ShowTitle))
 
-	log.Info(payload)
-
 	indexers := getIndexerList(payload)
 	allTorrents := []common.Torrent{}
 	l := log.Debug
@@ -100,16 +98,23 @@ func Search(c *fiber.Ctx) error {
 				"indexer",
 				"id",
 				indexer.Title,
+				"type",
+				payload.Type,
 				"torrents",
 				len(ts),
 				"took",
 				fmt.Sprintf("%.1fs", t2.Sub(t1).Seconds()),
 			)
-			log.Info("odin-movieshow/indexer/" + payload.Type + "/" + payload.Trakt)
+			indexertopic := "odin-movieshow/indexer/" + payload.Type
+			if payload.Type == "episode" {
+				indexertopic += "/" + payload.EpisodeTrakt
+			} else {
+				indexertopic += "/" + payload.Trakt
+			}
 			if ts != nil {
 				tsstr, _ := json.Marshal(ts)
 				mq.Publish(
-					"odin-movieshow/indexer/"+payload.Type+"/"+payload.Trakt,
+					indexertopic,
 					0,
 					false,
 					tsstr,
@@ -257,7 +262,7 @@ func getTorrents(indexer Indexer, payload common.Payload) []common.Torrent {
 
 	request := resty.New().
 		// SetRetryCount(1).
-		SetTimeout(time.Second * 30).
+		SetTimeout(time.Second * 60).
 		// SetRetryWaitTime(time.Second * 2).
 		R()
 
