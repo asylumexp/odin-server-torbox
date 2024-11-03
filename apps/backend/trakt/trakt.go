@@ -281,29 +281,24 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 			}
 
 			if (objmap.([]any)[0].(map[string]any)["movie"] != nil || objmap.([]any)[0].(map[string]any)["show"] != nil) && !strings.Contains(endpoint, "sync/history") {
-				objmap = GetWatched(objmap.([]any), app)
+
 				if strings.Contains(endpoint, "calendars") {
 					objmap = removeSeason0(objmap.([]any))
 					objmap = removeWatched(objmap.([]any))
 					objmap = removeDuplicates(objmap.([]any))
 				}
+				objmap = GetWatched(objmap.([]any), app)
 
-				// if !strings.Contains(endpoint, "/history") {
 				var wg sync.WaitGroup
 				var mux sync.Mutex
 				if FetchTMDB {
 					getTMDB(&wg, &mux, objmap.([]any), app)
 				}
-				if FetchSeasons {
-					// getSeasons(&wg, &mux, objmap.([]any), app)
-				}
+
 				wg.Wait()
-				objmap = GetWatched(objmap.([]any), app)
 				if !strings.Contains(endpoint, "sync/history") {
 					objmap = FixEpisodes(objmap)
-
 				}
-				// }
 
 			}
 		default:
