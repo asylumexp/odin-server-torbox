@@ -46,6 +46,9 @@ func ReadTmdbCache(app *pocketbase.PocketBase, id uint, resource string) interfa
 }
 
 func WriteTmdbCache(app *pocketbase.PocketBase, id uint, resource string, data *interface{}) {
+	if data == nil {
+		return
+	}
 	log.Info("cache write", "for", "tmdb", "resource", resource, "id", id)
 	record, err := app.Dao().
 		FindFirstRecordByFilter("tmdb", "tmdb_id = {:id} && type = {:type}", dbx.Params{"id": id, "type": resource})
@@ -54,6 +57,7 @@ func WriteTmdbCache(app *pocketbase.PocketBase, id uint, resource string, data *
 		record.Set("data", &data)
 		app.Dao().SaveRecord(record)
 	} else {
+
 		collection, _ := app.Dao().FindCollectionByNameOrId("tmdb")
 		record := models.NewRecord(collection)
 		record.Set("data", &data)
@@ -65,6 +69,9 @@ func WriteTmdbCache(app *pocketbase.PocketBase, id uint, resource string, data *
 }
 
 func WriteTraktSeasonCache(app *pocketbase.PocketBase, id uint, data *interface{}) {
+	if data == nil {
+		return
+	}
 	log.Info("cache write", "for", "trakt", "resource", "show_seasons", "id", id)
 	record, err := app.Dao().
 		FindFirstRecordByFilter("trakt_seasons", "trakt_id = {:id}", dbx.Params{"id": id})
@@ -124,6 +131,7 @@ func ReadRDCacheByResource(app *pocketbase.PocketBase, resource string) []types.
 }
 
 func WriteRDCache(app *pocketbase.PocketBase, resource string, magnet string, data interface{}) {
+
 	log.Info("cache write", "for", "RD", "resource", resource)
 	record, err := app.Dao().
 		FindFirstRecordByFilter("rd_resolved", "magnet = {:magnet}", dbx.Params{"magnet": magnet})

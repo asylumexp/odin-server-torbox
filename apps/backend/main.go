@@ -6,6 +6,7 @@ import (
 	stdlog "log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -122,9 +123,8 @@ func main() {
 
 	conf := pocketbase.Config{}
 	app := pocketbase.NewWithConfig(conf)
-	isGoRun := strings.HasPrefix(os.Args[0], os.TempDir())
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
-		Automigrate: isGoRun,
+		Automigrate: true,
 	})
 
 	// serves static files from the provided public dir (if exists)
@@ -292,6 +292,13 @@ func main() {
 			c.Response().Status = status
 			return c.JSON(http.StatusOK, result)
 		}, apis.RequireAdminAuth())
+
+		e.Router.GET("/traktseasons/:id", func(c echo.Context) error {
+			fmt.Println(c.PathParam("id"))
+			id, _ := strconv.Atoi(c.PathParam("id"))
+			res := trakt.GetSeasons(app, id)
+			return c.JSON(http.StatusOK, res)
+		}, RequireDeviceOrRecordAuth(app))
 
 		e.Router.GET("/tmdbseasons/:id", func(c echo.Context) error {
 			fmt.Println(c.PathParam("id"))

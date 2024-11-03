@@ -295,7 +295,7 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 					getTMDB(&wg, &mux, objmap.([]any), app)
 				}
 				if FetchSeasons {
-					getSeasons(&wg, &mux, objmap.([]any), app)
+					// getSeasons(&wg, &mux, objmap.([]any), app)
 				}
 				wg.Wait()
 				objmap = GetWatched(objmap.([]any), app)
@@ -464,6 +464,22 @@ func GetWatched(objmap []any, app *pocketbase.PocketBase) []any {
 
 	return newmap
 
+}
+func GetSeasons(app *pocketbase.PocketBase, id int) any {
+	// defer mux.Unlock()
+	// mux.Lock()
+	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
+
+	cache := helpers.ReadTraktSeasonCache(app, uint(id))
+	if cache != nil {
+		return cache
+	}
+
+	result, _, _ := CallEndpoint(endpoint, "GET", nil, false, app)
+
+	helpers.WriteTraktSeasonCache(app, uint(id), &result)
+
+	return result
 }
 
 func PopulateSeasons(k int, wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {

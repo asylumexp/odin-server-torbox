@@ -8,7 +8,17 @@ export const useMedia = defineStore('useMedia', () => {
 		if (!detail.value[id] && id) {
 			const res = await usePb().send(`/_trakt/search/trakt/${trakt}?type=${type}`, { method: 'GET' })
 			if (res.length > 0) {
-				detail.value[id] = res[0]
+				const item = res[0]
+				if (item.type === 'show') {
+					item.seasons = await usePb().send(`/traktseasons/${item.ids.trakt}`, { method: 'GET' })
+				}
+				detail.value[id] = item
+			}
+		} else {
+			if (detail.value[id].type === 'show') {
+				if (!detail.value[id].seasons) {
+					detail.value[id].seasons = await usePb().send(`/traktseasons/${detail.value[id].ids.trakt}`, { method: 'GET' })
+				}
 			}
 		}
 		return detail.value[id]

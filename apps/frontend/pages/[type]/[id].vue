@@ -28,7 +28,6 @@
 	const item = ref()
 	onMounted(async () => {
 		item.value = await useMedia().getDetail(useRoute().params.id as string, useRoute().params.type as string)
-		console.log(item.value)
 	})
 </script>
 
