@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/odin-movieshow/server/settings"
+	"github.com/odin-movieshow/backend/settings"
 
 	"github.com/charmbracelet/log"
 	"github.com/go-resty/resty/v2"

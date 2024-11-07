@@ -9,6 +9,7 @@ export default defineNuxtConfig({
 			pbUrl: 'http://127.0.0.1:8090',
 		},
 	},
+	compatibilityDate: '2024-07-03',
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
 		layoutTransition: { name: 'layout', mode: 'out-in' },

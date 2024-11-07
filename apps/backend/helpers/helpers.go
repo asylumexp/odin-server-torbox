@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/odin-movieshow/server/types"
+	"github.com/odin-movieshow/backend/types"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/models"

@@ -14,14 +14,14 @@ import (
 	"github.com/charmbracelet/log"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/joho/godotenv"
-	"github.com/odin-movieshow/server/common"
-	"github.com/odin-movieshow/server/helpers"
-	"github.com/odin-movieshow/server/imdb"
-	"github.com/odin-movieshow/server/realdebrid"
-	"github.com/odin-movieshow/server/scraper"
-	"github.com/odin-movieshow/server/settings"
-	"github.com/odin-movieshow/server/tmdb"
-	"github.com/odin-movieshow/server/trakt"
+	"github.com/odin-movieshow/backend/common"
+	"github.com/odin-movieshow/backend/helpers"
+	"github.com/odin-movieshow/backend/imdb"
+	"github.com/odin-movieshow/backend/realdebrid"
+	"github.com/odin-movieshow/backend/scraper"
+	"github.com/odin-movieshow/backend/settings"
+	"github.com/odin-movieshow/backend/tmdb"
+	"github.com/odin-movieshow/backend/trakt"
 
 	"github.com/labstack/echo/v5"
 	"github.com/pocketbase/pocketbase"
@@ -122,7 +122,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	conf := pocketbase.Config{DefaultDev: true}
+	conf := pocketbase.Config{}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Automigrate: true,
@@ -130,6 +130,7 @@ func main() {
 
 	// serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+
 		settings := settings.New(app)
 		helpers := helpers.New(app)
 		tmdb := tmdb.New(app, settings, helpers)

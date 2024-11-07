@@ -6,10 +6,10 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/odin-movieshow/server/helpers"
-	"github.com/odin-movieshow/server/realdebrid"
-	"github.com/odin-movieshow/server/settings"
-	"github.com/odin-movieshow/server/types"
+	"github.com/odin-movieshow/backend/helpers"
+	"github.com/odin-movieshow/backend/realdebrid"
+	"github.com/odin-movieshow/backend/settings"
+	"github.com/odin-movieshow/backend/types"
 	"github.com/thoas/go-funk"
 
 	"github.com/charmbracelet/log"

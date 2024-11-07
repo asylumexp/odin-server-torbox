@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/odin-movieshow/server/helpers"
-	"github.com/odin-movieshow/server/settings"
+	"github.com/odin-movieshow/backend/helpers"
+	"github.com/odin-movieshow/backend/settings"
 
 	"github.com/charmbracelet/log"
 	"github.com/pocketbase/pocketbase"
