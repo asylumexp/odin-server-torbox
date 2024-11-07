@@ -36,7 +36,7 @@ func New(app *pocketbase.PocketBase) *Settings {
 
 func (s *Settings) GetRealDebrid() *RealDebridSettings {
 	sets := s.getSettings()
-	if s != nil {
+	if sets != nil {
 		r := RealDebridSettings{}
 		if err := sets.UnmarshalJSONField("real_debrid", &r); err == nil {
 			return &r
@@ -47,7 +47,7 @@ func (s *Settings) GetRealDebrid() *RealDebridSettings {
 
 func (s *Settings) GetTrakt() *TraktSettings {
 	sets := s.getSettings()
-	if s != nil {
+	if sets != nil {
 		t := TraktSettings{}
 
 		if err := sets.UnmarshalJSONField("trakt", &t); err == nil {
@@ -61,7 +61,7 @@ func (s *Settings) GetTrakt() *TraktSettings {
 
 func (s *Settings) GetScraperUrl() string {
 	sets := s.getSettings()
-	if s != nil {
+	if sets != nil {
 		return sets.Get("scraper_url").(string)
 	}
 	return ""
@@ -70,7 +70,7 @@ func (s *Settings) GetScraperUrl() string {
 
 func (s *Settings) GetTmdb() *TmdbSettings {
 	sets := s.getSettings()
-	if s != nil {
+	if sets != nil {
 		t := TmdbSettings{}
 		if err := sets.UnmarshalJSONField("tmdb", &t); err == nil {
 			return &t
@@ -93,7 +93,7 @@ func (s *Settings) GetJackett() *JackettSettings {
 
 func (s *Settings) getSettings() *models.Record {
 	sets := []*models.Record{}
-	s.app.Dao().RecordQuery("settings").All(&s)
+	s.app.Dao().RecordQuery("settings").All(&sets)
 	if len(sets) > 0 {
 		return sets[0]
 	}

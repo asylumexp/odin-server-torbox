@@ -33,7 +33,6 @@ func (t *Tmdb) PopulateTMDB(
 	wg *sync.WaitGroup,
 	mux *sync.Mutex,
 	objmap []any,
-
 ) {
 	defer wg.Done()
 	// defer mux.Unlock()
@@ -79,7 +78,7 @@ func (t *Tmdb) PopulateTMDB(
 
 }
 
-func (t *Tmdb) GetEpisodes(showId string, seasons []string, app *pocketbase.PocketBase) *[]any {
+func (t *Tmdb) GetEpisodes(showId string, seasons []string) *[]any {
 	// '/tv/$showId/season/$season?api_key=$key'
 	tsets := t.settings.GetTmdb()
 	tmdbKey := tsets.Key

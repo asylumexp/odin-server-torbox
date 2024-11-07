@@ -13,8 +13,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/getsentry/sentry-go"
 	"github.com/joho/godotenv"
+	"github.com/odin-movieshow/server/common"
 	"github.com/odin-movieshow/server/helpers"
 	"github.com/odin-movieshow/server/imdb"
 	"github.com/odin-movieshow/server/realdebrid"
@@ -90,25 +90,25 @@ func main() {
 	godotenv.Load()
 
 	log.SetReportCaller(true)
-	err := sentry.Init(sentry.ClientOptions{
-		Dsn: "https://308c965810583274884cbc87d1a584de@sentry.dnmc.in/4",
-		// Set TracesSampleRate to 1.0 to capture 100%
-		// of transactions for performance monitoring.
-		// We recommend adjusting this value in production,
-		TracesSampleRate: 1.0,
-	})
-	if err != nil {
-		log.Error("sentry.Init: %s", err)
-	}
+	// err := sentry.Init(sentry.ClientOptions{
+	// 	Dsn: "https://308c965810583274884cbc87d1a584de@sentry.dnmc.in/4",
+	// 	// Set TracesSampleRate to 1.0 to capture 100%
+	// 	// of transactions for performance monitoring.
+	// 	// We recommend adjusting this value in production,
+	// 	TracesSampleRate: 1.0,
+	// })
+	// if err != nil {
+	// 	log.Error("sentry.Init: %s", err)
+	// }
 
-	// Flush buffered events before the program terminates.
-	defer sentry.Flush(2 * time.Second)
-	sentry.CaptureException(fmt.Errorf("This is a test exception"))
-	sentry.CaptureEvent(&sentry.Event{
-		Message: "This is a test error event",
-		Level:   sentry.LevelError,
-	})
-	sentry.CaptureMessage("This is a test message")
+	// // Flush buffered events before the program terminates.
+	// defer sentry.Flush(2 * time.Second)
+	// sentry.CaptureException(fmt.Errorf("This is a test exception"))
+	// sentry.CaptureEvent(&sentry.Event{
+	// 	Message: "This is a test error event",
+	// 	Level:   sentry.LevelError,
+	// })
+	// sentry.CaptureMessage("This is a test message")
 
 	l, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 	if err == nil {
@@ -122,7 +122,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	conf := pocketbase.Config{}
+	conf := pocketbase.Config{DefaultDev: true}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Automigrate: true,
@@ -223,10 +223,10 @@ func main() {
 					s := sections[t].([]any)
 					if s != nil {
 						for i := range s {
-							sections[t].([]any)[i].(map[string]any)["title"] = helpers.ParseDates(
+							sections[t].([]any)[i].(map[string]any)["title"] = common.ParseDates(
 								sections[t].([]any)[i].(map[string]any)["title"].(string),
 							)
-							sections[t].([]any)[i].(map[string]any)["url"] = helpers.ParseDates(
+							sections[t].([]any)[i].(map[string]any)["url"] = common.ParseDates(
 								sections[t].([]any)[i].(map[string]any)["url"].(string),
 							)
 						}
@@ -244,6 +244,7 @@ func main() {
 		}, RequireDeviceOrRecordAuth(app))
 
 		e.Router.Any("/_trakt/*", func(c echo.Context) error {
+
 			info := apis.RequestInfo(c)
 
 			id := info.AuthRecord.Id
@@ -273,13 +274,12 @@ func main() {
 					trakt.SyncHistory()
 				}()
 			}
-			url = helpers.ParseDates(url)
+			url = common.ParseDates(url)
 			result, headers, status := trakt.CallEndpoint(
 				url,
 				c.Request().Method,
 				jsonData,
 				true,
-				app,
 			)
 
 			for k, v := range headers {
@@ -323,7 +323,7 @@ func main() {
 		e.Router.GET("/tmdbseasons/:id", func(c echo.Context) error {
 			fmt.Println(c.PathParam("id"))
 			seasons := c.QueryParam("seasons")
-			res := tmdb.GetEpisodes(c.PathParam("id"), strings.Split(seasons, ","), app)
+			res := tmdb.GetEpisodes(c.PathParam("id"), strings.Split(seasons, ","))
 			return c.JSON(http.StatusOK, res)
 		}, RequireDeviceOrRecordAuth(app))
 

@@ -3,10 +3,6 @@ package helpers
 import (
 	"fmt"
 	"os/user"
-	"regexp"
-	"runtime"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -117,7 +113,8 @@ func (h *Helpers) ReadRDCache(resource string, magnet string) *types.Torrent {
 }
 
 func (h *Helpers) ReadRDCacheByResource(resource string) []types.Torrent {
-	records, err := h.app.Dao().FindRecordsByFilter("rd_resolved", "resource = {:resource}", "id", -1, 0, dbx.Params{"resource": resource})
+	records, err := h.app.Dao().
+		FindRecordsByFilter("rd_resolved", "resource = {:resource}", "id", -1, 0, dbx.Params{"resource": resource})
 	res := make([]types.Torrent, 0)
 	if err == nil {
 		for _, record := range records {
@@ -175,93 +172,4 @@ func (h *Helpers) ReadTraktSeasonCache(id uint) []any {
 		}
 	}
 	return nil
-}
-
-func (h *Helpers) ParseDates(str string) string {
-
-	re := regexp.MustCompile("::(year|month|day):(\\+|-)?(\\d+)?:")
-
-	matches := re.FindAllStringSubmatch(str, -1)
-	now := time.Now()
-	for _, match := range matches {
-
-		yearVal := 0
-		monthVal := 0
-		dayVal := 0
-		if len(match) == 4 {
-			val := 0
-			if v, err := strconv.Atoi(match[3]); err == nil {
-				val = v
-			}
-			if match[2] == "-" {
-				val *= -1
-			}
-			if match[1] == "year" {
-
-				yearVal = val
-				str = strings.ReplaceAll(str, match[0], "#year#")
-			} else if match[1] == "month" {
-				monthVal = val
-				str = strings.ReplaceAll(str, match[0], "#month#")
-			} else if match[1] == "day" {
-				dayVal = val
-				str = strings.ReplaceAll(str, match[0], "#day#")
-			}
-		}
-		now = now.AddDate(yearVal, monthVal, dayVal)
-		str = strings.ReplaceAll(str, "#year#", fmt.Sprintf("%d", now.Year()))
-		str = strings.ReplaceAll(str, "#month#", fmt.Sprintf("%d", now.Month()))
-		str = strings.ReplaceAll(str, "#day#", fmt.Sprintf("%d", now.Day()))
-
-	}
-
-	re2 := regexp.MustCompile("::monthdays::")
-
-	matches2 := re2.FindAllStringSubmatch(str, -1)
-	dinm := daysInMonth(now)
-	for _, match := range matches2 {
-		str = strings.ReplaceAll(str, match[0], fmt.Sprintf("%d", dinm))
-	}
-
-	return str
-}
-
-func daysInMonth(t time.Time) int {
-	t = time.Date(t.Year(), t.Month(), 32, 0, 0, 0, 0, time.UTC)
-	daysInMonth := 32 - t.Day()
-	days := make([]int, daysInMonth)
-	for i := range days {
-		days[i] = i + 1
-	}
-
-	d := days[len(days)-1]
-	d += 1
-	return d
-}
-
-func Chunk[T any](slice []T) [][]T {
-	size := ItemsPerChunk(slice)
-	var chunks [][]T
-	for i := 0; i < len(slice); {
-		// Clamp the last chunk to the slice bound as necessary.
-		end := size
-		if l := len(slice[i:]); l < size {
-			end = l
-		}
-
-		// Set the capacity of each chunk so that appending to a chunk does not
-		// modify the original slice.
-		chunks = append(chunks, slice[i:i+end:i+end])
-		i += end
-	}
-
-	return chunks
-}
-
-func ItemsPerChunk[T any](slice []T) int {
-	batchSize := runtime.NumCPU() / 2
-	if len(slice) < batchSize {
-		batchSize = 1
-	}
-	return len(slice) / batchSize
 }
