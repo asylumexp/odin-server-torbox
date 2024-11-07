@@ -28,16 +28,34 @@ const (
 	TRAKT_URL = "https://api.trakt.tv"
 )
 
+type Trakt struct {
+	app          *pocketbase.PocketBase
+	tmdb         *tmdb.Tmdb
+	settings     *settings.Settings
+	helpers      *helpers.Helpers
+	Headers      map[string]any
+	FetchTMDB    bool
+	FetchSeasons bool
+}
+
+func New(app *pocketbase.PocketBase, tmdb *tmdb.Tmdb, settings *settings.Settings, helpers *helpers.Helpers) *Trakt {
+	return &Trakt{
+		app:          app,
+		tmdb:         tmdb,
+		settings:     settings,
+		helpers:      helpers,
+		Headers:      map[string]any{},
+		FetchTMDB:    true,
+		FetchSeasons: true,
+	}
+}
+
 // Removes slice element at index(s) and returns new slice
 func remove[T any](slice []T, s int) []T {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-var Headers = make(map[string]any)
-var FetchTMDB = true
-var FetchSeasons = true
-
-func normalize(objmap []any, endpoint string) {
+func (t *Trakt) normalize(objmap []any, endpoint string) {
 	obj := "movie"
 	if strings.Contains(endpoint, "/show") {
 		obj = "show"
@@ -53,7 +71,7 @@ func normalize(objmap []any, endpoint string) {
 
 }
 
-func removeDuplicates(objmap []any) []any {
+func (t *Trakt) removeDuplicates(objmap []any) []any {
 	showsSeen := make([]float64, 0)
 	toRemove := make([]int, 0)
 	for i, o := range objmap {
@@ -77,7 +95,7 @@ func removeDuplicates(objmap []any) []any {
 
 }
 
-func removeWatched(objmap []any) []any {
+func (t *Trakt) removeWatched(objmap []any) []any {
 	toRemove := make([]int, 0)
 	for i, o := range objmap {
 		if o.(map[string]any)["episode"].(map[string]any)["watched"] != nil && o.(map[string]any)["episode"].(map[string]any)["watched"].(bool) == true {
@@ -98,7 +116,7 @@ func removeWatched(objmap []any) []any {
 
 }
 
-func removeSeason0(objmap []any) []any {
+func (t *Trakt) removeSeason0(objmap []any) []any {
 	toKeep := []any{}
 	for _, o := range objmap {
 
@@ -111,30 +129,30 @@ func removeSeason0(objmap []any) []any {
 
 }
 
-func SyncHistory(app *pocketbase.PocketBase) {
+func (t *Trakt) SyncHistory() {
 	users := []*models.Record{}
-	app.Dao().RecordQuery("users").All(&users)
-	FetchTMDB = false
-	FetchSeasons = false
+	t.app.Dao().RecordQuery("users").All(&users)
+	t.FetchTMDB = false
+	t.FetchSeasons = false
 	var wg sync.WaitGroup
 	for _, u := range users {
-		records, _ := app.Dao().FindRecordsByFilter("history", "user = {:user}", "-watched_at", 1, 0, dbx.Params{"user": u.Get("id")})
+		records, _ := t.app.Dao().FindRecordsByFilter("history", "user = {:user}", "-watched_at", 1, 0, dbx.Params{"user": u.Get("id")})
 		last_watched := types.DateTime{}
 		if len(records) > 0 {
 			last_watched = records[0].GetDateTime("watched_at")
 		}
 
-		t := make(map[string]any)
-		if err := u.UnmarshalJSONField("trakt_token", &t); err != nil {
+		token := make(map[string]any)
+		if err := u.UnmarshalJSONField("trakt_token", &token); err != nil {
 			continue
 		}
 
-		Headers["authorization"] = "Bearer " + t["access_token"].(string)
+		t.Headers["authorization"] = "Bearer " + token["access_token"].(string)
 
 		wg.Add(1)
-		go syncByType(&wg, "movies", last_watched, app, u.Get("id").(string))
+		go t.syncByType(&wg, "movies", last_watched, t.app, u.Get("id").(string))
 		wg.Add(1)
-		go syncByType(&wg, "episodes", last_watched, app, u.Get("id").(string))
+		go t.syncByType(&wg, "episodes", last_watched, t.app, u.Get("id").(string))
 
 		wg.Wait()
 		log.Info("Done synching trakt history", "user", u.Get("id"))
@@ -142,15 +160,15 @@ func SyncHistory(app *pocketbase.PocketBase) {
 	}
 }
 
-func syncByType(wg *sync.WaitGroup, t string, last_history types.DateTime, app *pocketbase.PocketBase, user string) {
+func (t *Trakt) syncByType(wg *sync.WaitGroup, typ string, last_history types.DateTime, app *pocketbase.PocketBase, user string) {
 	defer wg.Done()
 	limit := 100
-	url := "/sync/history/" + t + "?limit=" + fmt.Sprint(limit)
-	collection, _ := app.Dao().FindCollectionByNameOrId("history")
+	url := "/sync/history/" + typ + "?limit=" + fmt.Sprint(limit)
+	collection, _ := t.app.Dao().FindCollectionByNameOrId("history")
 	if !last_history.IsZero() {
 		url += "&start_at=" + last_history.Time().Add(time.Second*1).Format(time.RFC3339)
 	}
-	_, headers, _ := CallEndpoint(url, "GET", nil, false, app)
+	_, headers, _ := t.CallEndpoint(url, "GET", nil, false, app)
 	pages, _ := strconv.Atoi(headers.Get("X-Pagination-Page-Count"))
 
 	for i := 1; i <= pages; i++ {
@@ -160,21 +178,21 @@ func syncByType(wg *sync.WaitGroup, t string, last_history types.DateTime, app *
 			defer wg.Done()
 			url += "&page=" + fmt.Sprint(i)
 
-			data, _, _ := CallEndpoint(url, "GET", nil, false, app)
+			data, _, _ := t.CallEndpoint(url, "GET", nil, false, app)
 			log.Debug("Synching trakt history", "type", t, "page", fmt.Sprintf("%d/%d", i, pages), "user", user, "count", len(data.([]any)))
 			for _, o := range data.([]any) {
 
 				record := models.NewRecord(collection)
 				record.Set("watched_at", o.(map[string]any)["watched_at"])
 				record.Set("user", user)
-				if t == "movies" {
+				if typ == "movies" {
 					record.Set("type", "movie")
 
 					record.Set("trakt_id", o.(map[string]any)["movie"].(map[string]any)["ids"].(map[string]any)["trakt"])
 					record.Set("data", map[string]any{"genres": o.(map[string]any)["movie"].(map[string]any)["genres"]})
 					record.Set("runtime", o.(map[string]any)["movie"].(map[string]any)["runtime"])
 
-				} else if t == "episodes" {
+				} else if typ == "episodes" {
 					record.Set("type", "episode")
 					record.Set("trakt_id", o.(map[string]any)["episode"].(map[string]any)["ids"].(map[string]any)["trakt"])
 					record.Set("show_id", o.(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"])
@@ -190,18 +208,18 @@ func syncByType(wg *sync.WaitGroup, t string, last_history types.DateTime, app *
 
 }
 
-func RefreshTokens(app *pocketbase.PocketBase) {
+func (t *Trakt) RefreshTokens() {
 	records := []*models.Record{}
-	app.Dao().RecordQuery("users").All(&records)
+	t.app.Dao().RecordQuery("users").All(&records)
 
 	for _, r := range records {
-		t := make(map[string]any)
+		token := make(map[string]any)
 		if err := r.UnmarshalJSONField("trakt_token", &t); err == nil {
-			data, _, status := CallEndpoint("/oauth/token", "POST", map[string]any{"grant_type": "refresh_token", "client_id": settings.GetTrakt(app).ClientId, "client_secret": settings.GetTrakt(app).ClientSecret, "code": t["device_code"], "refresh_token": t["refresh_token"]}, false, app)
+			data, _, status := t.CallEndpoint("/oauth/token", "POST", map[string]any{"grant_type": "refresh_token", "client_id": t.settings.GetTrakt().ClientId, "client_secret": t.settings.GetTrakt().ClientSecret, "code": token["device_code"], "refresh_token": token["refresh_token"]}, false, t.app)
 			if status < 300 && data != nil {
-				data.(map[string]any)["device_code"] = t["device_code"]
+				data.(map[string]any)["device_code"] = token["device_code"]
 				r.Set("trakt_token", data)
-				app.Dao().Save(r)
+				t.app.Dao().Save(r)
 				log.Info("trakt refresh token", "user", r.Get("id"))
 			}
 		}
@@ -210,15 +228,15 @@ func RefreshTokens(app *pocketbase.PocketBase) {
 
 }
 
-func CallEndpoint(endpoint string, method string, body map[string]any, donorm bool, app *pocketbase.PocketBase) (any, http.Header, int) {
+func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any, donorm bool, app *pocketbase.PocketBase) (any, http.Header, int) {
 
 	var objmap any
 
 	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 3).R()
-	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", settings.GetTrakt(app).ClientId)
+	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", t.settings.GetTrakt().ClientId)
 	var respHeaders http.Header
 	var status = 200
-	for k, v := range Headers {
+	for k, v := range t.Headers {
 
 		if funk.Contains([]string{"Host", "Connection"}, k) {
 			continue
@@ -259,7 +277,7 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 	if resp, err := r(fmt.Sprintf("%s%s", TRAKT_URL, endpoint)); err == nil {
 		respHeaders = resp.Header()
 		status = resp.StatusCode()
-		log.Debug("trakt fetch", "url", endpoint, "method", method, "status", status, "body", body, "headers", Headers)
+		log.Debug("trakt fetch", "url", endpoint, "method", method, "status", status, "body", body, "headers", t.Headers)
 		if status > 299 {
 			log.Error("trakt", "fetch", endpoint, "status", status, "res", string(resp.Body()), "body", body, "headers", respHeaders)
 		}
@@ -277,26 +295,28 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 			}
 
 			if donorm {
-				normalize(objmap.([]any), endpoint)
+				t.normalize(objmap.([]any), endpoint)
 			}
 
 			if (objmap.([]any)[0].(map[string]any)["movie"] != nil || objmap.([]any)[0].(map[string]any)["show"] != nil) && !strings.Contains(endpoint, "sync/history") {
-				objmap = GetWatched(objmap.([]any), app)
+
+				objmap = t.GetWatched(objmap.([]any), app)
+
 				if strings.Contains(endpoint, "calendars") {
-					objmap = removeSeason0(objmap.([]any))
-					objmap = removeWatched(objmap.([]any))
-					objmap = removeDuplicates(objmap.([]any))
+					objmap = t.removeSeason0(objmap.([]any))
+					objmap = t.removeWatched(objmap.([]any))
+					objmap = t.removeDuplicates(objmap.([]any))
 				}
 
 				var wg sync.WaitGroup
 				var mux sync.Mutex
-				if FetchTMDB {
-					getTMDB(&wg, &mux, objmap.([]any), app)
+				if t.FetchTMDB {
+					t.getTMDB(&wg, &mux, objmap.([]any), app)
 				}
 
 				wg.Wait()
 				if !strings.Contains(endpoint, "sync/history") {
-					objmap = FixEpisodes(objmap)
+					objmap = t.FixEpisodes(objmap)
 				}
 
 			}
@@ -314,7 +334,7 @@ func CallEndpoint(endpoint string, method string, body map[string]any, donorm bo
 
 // fixes calendar episodes
 
-func FixEpisodes(result any) []any {
+func (t *Trakt) FixEpisodes(result any) []any {
 	if funk.IsCollection(result) {
 
 		result = funk.Map(result, func(m any) any {
@@ -347,10 +367,10 @@ func FixEpisodes(result any) []any {
 
 }
 
-func getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {
+func (t *Trakt) getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any, app *pocketbase.PocketBase) {
 	for k := range objmap {
 		wg.Add(1)
-		go tmdb.PopulateTMDB(k, wg, mux, objmap, app)
+		go t.tmdb.PopulateTMDB(k, wg, mux, objmap)
 	}
 }
 
@@ -391,21 +411,21 @@ type Watched struct {
 	} `json:"seasons"`
 }
 
-func GetWatched(objmap []any, app *pocketbase.PocketBase) []any {
+func (t *Trakt) GetWatched(objmap []any, app *pocketbase.PocketBase) []any {
 
 	if len(objmap) == 0 {
 		return objmap
 	}
 	if objmap[0].(map[string]any)["show"] != nil {
-		return GetWatchedCalendarEpisodes(objmap, app)
+		return t.GetWatchedCalendarEpisodes(objmap)
 	}
 
-	return GetWatchedMovies(objmap, app)
+	return t.GetWatchedMovies(objmap, app)
 
 }
 
-func getHistory(app *pocketbase.PocketBase, htype string) []any {
-	records, _ := app.Dao().FindRecordsByFilter("history", "type = {:htype}", "-watched_at", -1, 0, dbx.Params{"htype": htype})
+func (t *Trakt) getHistory(htype string) []any {
+	records, _ := t.app.Dao().FindRecordsByFilter("history", "type = {:htype}", "-watched_at", -1, 0, dbx.Params{"htype": htype})
 	data := make([]any, 0)
 	for _, r := range records {
 		item := make(map[string]any)
@@ -416,8 +436,8 @@ func getHistory(app *pocketbase.PocketBase, htype string) []any {
 	return data
 }
 
-func GetWatchedCalendarEpisodes(objmap []any, app *pocketbase.PocketBase) []any {
-	history := getHistory(app, "episode")
+func (t *Trakt) GetWatchedCalendarEpisodes(objmap []any) []any {
+	history := t.getHistory("episode")
 	for i := range objmap {
 		tvshow := objmap[i].(map[string]any)["show"].(map[string]any)
 		episode := objmap[i].(map[string]any)["episode"]
@@ -443,8 +463,8 @@ func GetWatchedCalendarEpisodes(objmap []any, app *pocketbase.PocketBase) []any 
 	return newmap
 }
 
-func GetWatchedMovies(objmap []any, app *pocketbase.PocketBase) []any {
-	history := getHistory(app, "movie")
+func (t *Trakt) GetWatchedMovies(objmap []any, app *pocketbase.PocketBase) []any {
+	history := t.getHistory("movie")
 	for i, o := range objmap {
 		objmap[i].(map[string]any)["movie"].(map[string]any)["watched"] = false
 		for _, h := range history {
@@ -464,8 +484,8 @@ func GetWatchedMovies(objmap []any, app *pocketbase.PocketBase) []any {
 	return newmap
 }
 
-func GetWatchedSeasonEpisodes(objmap []any, app *pocketbase.PocketBase) []any {
-	history := getHistory(app, "episode")
+func (t *Trakt) GetWatchedSeasonEpisodes(objmap []any) []any {
+	history := t.getHistory("episode")
 	for _, oseason := range objmap {
 		for _, oepisode := range oseason.(map[string]any)["episodes"].([]any) {
 			oepisode.(map[string]any)["watched"] = false
@@ -485,18 +505,18 @@ func GetWatchedSeasonEpisodes(objmap []any, app *pocketbase.PocketBase) []any {
 
 }
 
-func GetSeasons(app *pocketbase.PocketBase, id int) any {
+func (t *Trakt) GetSeasons(id int) any {
 
 	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
 
-	cache := helpers.ReadTraktSeasonCache(app, uint(id))
+	cache := t.helpers.ReadTraktSeasonCache(uint(id))
 	if cache != nil {
-		return GetWatchedSeasonEpisodes(cache, app)
+		return t.GetWatchedSeasonEpisodes(cache)
 	}
 
-	result, _, _ := CallEndpoint(endpoint, "GET", nil, false, app)
+	result, _, _ := t.CallEndpoint(endpoint, "GET", nil, false, t.app)
 
-	helpers.WriteTraktSeasonCache(app, uint(id), &result)
+	t.helpers.WriteTraktSeasonCache(uint(id), &result)
 
-	return GetWatchedSeasonEpisodes(result.([]any), app)
+	return t.GetWatchedSeasonEpisodes(result.([]any))
 }

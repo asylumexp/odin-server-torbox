@@ -16,7 +16,15 @@ import (
 	"github.com/pocketbase/pocketbase/models"
 )
 
-func GetHomeDir() string {
+type Helpers struct {
+	app *pocketbase.PocketBase
+}
+
+func New(app *pocketbase.PocketBase) *Helpers {
+	return &Helpers{app: app}
+}
+
+func (h *Helpers) GetHomeDir() string {
 	currentUser, err := user.Current()
 	if err != nil {
 		fmt.Println(err)
@@ -25,8 +33,8 @@ func GetHomeDir() string {
 	return currentUser.HomeDir
 }
 
-func ReadTmdbCache(app *pocketbase.PocketBase, id uint, resource string) interface{} {
-	record, err := app.Dao().
+func (h *Helpers) ReadTmdbCache(id uint, resource string) interface{} {
+	record, err := h.app.Dao().
 		FindFirstRecordByFilter("tmdb", "tmdb_id = {:id} && type = {:type}", dbx.Params{"id": id, "type": resource})
 	res := make(map[string]any)
 	if err == nil {
@@ -45,52 +53,52 @@ func ReadTmdbCache(app *pocketbase.PocketBase, id uint, resource string) interfa
 	return nil
 }
 
-func WriteTmdbCache(app *pocketbase.PocketBase, id uint, resource string, data *interface{}) {
+func (h *Helpers) WriteTmdbCache(id uint, resource string, data *interface{}) {
 	if data == nil {
 		return
 	}
 	log.Info("cache write", "for", "tmdb", "resource", resource, "id", id)
-	record, err := app.Dao().
+	record, err := h.app.Dao().
 		FindFirstRecordByFilter("tmdb", "tmdb_id = {:id} && type = {:type}", dbx.Params{"id": id, "type": resource})
 
 	if err == nil {
 		record.Set("data", &data)
-		app.Dao().SaveRecord(record)
+		h.app.Dao().SaveRecord(record)
 	} else {
 
-		collection, _ := app.Dao().FindCollectionByNameOrId("tmdb")
+		collection, _ := h.app.Dao().FindCollectionByNameOrId("tmdb")
 		record := models.NewRecord(collection)
 		record.Set("data", &data)
 		record.Set("tmdb_id", id)
 		record.Set("type", resource)
-		app.Dao().SaveRecord(record)
+		h.app.Dao().SaveRecord(record)
 	}
 
 }
 
-func WriteTraktSeasonCache(app *pocketbase.PocketBase, id uint, data *interface{}) {
+func (h *Helpers) WriteTraktSeasonCache(id uint, data *interface{}) {
 	if data == nil {
 		return
 	}
 	log.Info("cache write", "for", "trakt", "resource", "show_seasons", "id", id)
-	record, err := app.Dao().
+	record, err := h.app.Dao().
 		FindFirstRecordByFilter("trakt_seasons", "trakt_id = {:id}", dbx.Params{"id": id})
 
 	if err == nil {
 		record.Set("data", &data)
-		app.Dao().SaveRecord(record)
+		h.app.Dao().SaveRecord(record)
 	} else {
-		collection, _ := app.Dao().FindCollectionByNameOrId("trakt_seasons")
+		collection, _ := h.app.Dao().FindCollectionByNameOrId("trakt_seasons")
 		record := models.NewRecord(collection)
 		record.Set("data", &data)
 		record.Set("trakt_id", id)
-		app.Dao().SaveRecord(record)
+		h.app.Dao().SaveRecord(record)
 	}
 
 }
 
-func ReadRDCache(app *pocketbase.PocketBase, resource string, magnet string) *types.Torrent {
-	record, err := app.Dao().
+func (h *Helpers) ReadRDCache(resource string, magnet string) *types.Torrent {
+	record, err := h.app.Dao().
 		FindFirstRecordByFilter("rd_resolved", "magnet = {:magnet}", dbx.Params{"magnet": magnet})
 	var res types.Torrent
 	if err == nil {
@@ -108,8 +116,8 @@ func ReadRDCache(app *pocketbase.PocketBase, resource string, magnet string) *ty
 	return nil
 }
 
-func ReadRDCacheByResource(app *pocketbase.PocketBase, resource string) []types.Torrent {
-	records, err := app.Dao().FindRecordsByFilter("rd_resolved", "resource = {:resource}", "id", -1, 0, dbx.Params{"resource": resource})
+func (h *Helpers) ReadRDCacheByResource(resource string) []types.Torrent {
+	records, err := h.app.Dao().FindRecordsByFilter("rd_resolved", "resource = {:resource}", "id", -1, 0, dbx.Params{"resource": resource})
 	res := make([]types.Torrent, 0)
 	if err == nil {
 		for _, record := range records {
@@ -130,27 +138,27 @@ func ReadRDCacheByResource(app *pocketbase.PocketBase, resource string) []types.
 	return res
 }
 
-func WriteRDCache(app *pocketbase.PocketBase, resource string, magnet string, data interface{}) {
+func (h *Helpers) WriteRDCache(resource string, magnet string, data interface{}) {
 
 	log.Info("cache write", "for", "RD", "resource", resource)
-	record, err := app.Dao().
+	record, err := h.app.Dao().
 		FindFirstRecordByFilter("rd_resolved", "magnet = {:magnet}", dbx.Params{"magnet": magnet})
 
 	if err == nil {
 		record.Set("data", &data)
-		app.Dao().SaveRecord(record)
+		h.app.Dao().SaveRecord(record)
 	} else {
-		collection, _ := app.Dao().FindCollectionByNameOrId("rd_resolved")
+		collection, _ := h.app.Dao().FindCollectionByNameOrId("rd_resolved")
 		record := models.NewRecord(collection)
 		record.Set("data", &data)
 		record.Set("magnet", magnet)
 		record.Set("resource", resource)
-		app.Dao().SaveRecord(record)
+		h.app.Dao().SaveRecord(record)
 	}
 }
 
-func ReadTraktSeasonCache(app *pocketbase.PocketBase, id uint) []any {
-	record, err := app.Dao().
+func (h *Helpers) ReadTraktSeasonCache(id uint) []any {
+	record, err := h.app.Dao().
 		FindFirstRecordByFilter("trakt_seasons", "trakt_id = {:id}", dbx.Params{"id": id})
 	res := make([]any, 0)
 	if err == nil {
@@ -169,7 +177,7 @@ func ReadTraktSeasonCache(app *pocketbase.PocketBase, id uint) []any {
 	return nil
 }
 
-func ParseDates(str string) string {
+func (h *Helpers) ParseDates(str string) string {
 
 	re := regexp.MustCompile("::(year|month|day):(\\+|-)?(\\d+)?:")
 

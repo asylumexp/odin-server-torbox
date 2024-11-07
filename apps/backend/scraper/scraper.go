@@ -17,9 +17,25 @@ import (
 	"github.com/pocketbase/pocketbase"
 )
 
-func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) {
+type Scraper struct {
+	app        *pocketbase.PocketBase
+	settings   *settings.Settings
+	helpers    *helpers.Helpers
+	realdebrid *realdebrid.RealDebrid
+}
+
+func New(
+	app *pocketbase.PocketBase,
+	settings *settings.Settings,
+	helpers *helpers.Helpers,
+	realdebrid *realdebrid.RealDebrid,
+) *Scraper {
+	return &Scraper{app: app, settings: settings, helpers: helpers, realdebrid: realdebrid}
+}
+
+func (s *Scraper) GetLinks(data map[string]any, mqt mqtt.Client) {
 	// mux := sync.Mutex{}
-	j := settings.GetJackett(app)
+	j := s.settings.GetJackett()
 
 	if j == nil {
 		log.Error("jackett", "error", "no settings")
@@ -39,7 +55,7 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) 
 	log.Debug("MQTT", "topic", indexertopic)
 	torrentQueue := make(chan types.Torrent)
 
-	allTorrentsUnrestricted := helpers.ReadRDCacheByResource(app, topic)
+	allTorrentsUnrestricted := s.helpers.ReadRDCacheByResource(topic)
 	for _, u := range allTorrentsUnrestricted {
 		cstr, _ := json.Marshal(u)
 		mqt.Publish(topic, 0, false, cstr)
@@ -75,7 +91,7 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) 
 			case k := <-torrentQueue:
 				if !funk.Contains(done, k.Magnet) && k.Quality != "720p" && k.Quality != "SD" &&
 					k.Quality != "CAM" {
-					unrestrict(k, app, mqt, topic)
+					s.unrestrict(k, mqt, topic)
 					done = append(done, k.Magnet)
 				}
 
@@ -83,7 +99,7 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) 
 		}
 	}()
 
-	_, err := res.Post(fmt.Sprintf("%s/scrape", settings.GetScraperUrl(app)))
+	_, err := res.Post(fmt.Sprintf("%s/scrape", s.settings.GetScraperUrl()))
 	if err != nil {
 		log.Error("scrape", err)
 		return
@@ -156,23 +172,27 @@ func GetLinks(data map[string]any, app *pocketbase.PocketBase, mqt mqtt.Client) 
 
 }
 
-func unrestrict(k types.Torrent, app *pocketbase.PocketBase, mqt mqtt.Client, topic string) {
+func (s *Scraper) unrestrict(
+	k types.Torrent,
+	mqt mqtt.Client,
+	topic string,
+) {
 
-	cache := helpers.ReadRDCache(app, topic, k.Magnet)
+	cache := s.helpers.ReadRDCache(topic, k.Magnet)
 	if cache != nil {
 		cstr, _ := json.Marshal(cache)
 		mqt.Publish(topic, 0, false, cstr)
 		return
 	}
 
-	u := realdebrid.Unrestrict(k.Magnet, app)
+	u := s.realdebrid.Unrestrict(k.Magnet)
 	if u == nil || len(u) == 0 {
 		return
 	}
 	k.RealDebrid = append(k.RealDebrid, u)
 	log.Warn(k.ReleaseTitle)
 	if len(k.RealDebrid) > 0 {
-		helpers.WriteRDCache(app, topic, k.Magnet, k)
+		s.helpers.WriteRDCache(topic, k.Magnet, k)
 		kstr, _ := json.Marshal(k)
 		mqt.Publish(topic, 0, false, kstr)
 	}

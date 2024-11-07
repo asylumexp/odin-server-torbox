@@ -18,10 +18,18 @@ import (
 	"github.com/thoas/go-funk"
 )
 
-var Headers = make(map[string]any)
+type RealDebrid struct {
+	app      *pocketbase.PocketBase
+	settings *settings.Settings
+	Headers  map[string]any
+}
 
-func RemoveByType(app *pocketbase.PocketBase, t string) {
-	res, headers, _ := CallEndpoint(fmt.Sprintf("/%s/?limit=1", t), "GET", nil, app)
+func New(app *pocketbase.PocketBase, settings *settings.Settings) *RealDebrid {
+	return &RealDebrid{app: app, settings: settings}
+}
+
+func (rd *RealDebrid) RemoveByType(t string) {
+	res, headers, _ := rd.CallEndpoint(fmt.Sprintf("/%s/?limit=1", t), "GET", nil)
 	if res == nil {
 		return
 	}
@@ -35,13 +43,12 @@ func RemoveByType(app *pocketbase.PocketBase, t string) {
 	}
 
 	for count > 0 {
-		res, _, _ := CallEndpoint(fmt.Sprintf("/%s/?limit=200", t), "GET", nil, app)
+		res, _, _ := rd.CallEndpoint(fmt.Sprintf("/%s/?limit=200", t), "GET", nil)
 		for _, v := range res.([]any) {
-			CallEndpoint(
+			rd.CallEndpoint(
 				fmt.Sprintf("/%s/delete/%s", t, v.(map[string]any)["id"].(string)),
 				"DELETE",
 				nil,
-				app,
 			)
 		}
 		count -= 200
@@ -51,20 +58,20 @@ func RemoveByType(app *pocketbase.PocketBase, t string) {
 
 }
 
-func RefreshTokens(app *pocketbase.PocketBase) {
+func (rd *RealDebrid) RefreshTokens() {
 	records := []models.Record{}
-	app.Dao().RecordQuery("settings").All(&records)
+	rd.app.Dao().RecordQuery("settings").All(&records)
 	if len(records) == 0 {
 		return
 	}
 	data := make(map[string]any)
 	r := records[0]
 
-	rd := settings.GetRealDebrid(app)
+	rdsets := rd.settings.GetRealDebrid()
 	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 3).R()
-	request.SetHeader("Authorization", "Bearer "+rd.AccessToken)
+	request.SetHeader("Authorization", "Bearer "+rdsets.AccessToken)
 
-	for k, v := range Headers {
+	for k, v := range rd.Headers {
 
 		if funk.Contains([]string{"Host", "Connection"}, k) {
 			continue
@@ -72,25 +79,24 @@ func RefreshTokens(app *pocketbase.PocketBase) {
 		request.SetHeader(k, v.(string))
 	}
 	if _, err := request.SetFormData(map[string]string{
-		"client_id":     rd.ClientId,
-		"client_secret": rd.ClientSecret,
-		"code":          rd.RefreshToken,
+		"client_id":     rdsets.ClientId,
+		"client_secret": rdsets.ClientSecret,
+		"code":          rdsets.RefreshToken,
 		"grant_type":    "http://oauth.net/grant_type/device/1.0",
 	}).SetResult(&data).Post("https://api.real-debrid.com/oauth/v2/token"); err == nil {
-		rd.AccessToken = data["access_token"].(string)
-		rd.RefreshToken = data["refresh_token"].(string)
-		r.Set("real_debrid", rd)
+		rdsets.AccessToken = data["access_token"].(string)
+		rdsets.RefreshToken = data["refresh_token"].(string)
+		r.Set("real_debrid", rdsets)
 		log.Info("realdebrid", "token", "refreshed")
-		app.Dao().SaveRecord(&r)
+		rd.app.Dao().SaveRecord(&r)
 	}
 
 }
 
-func CallEndpoint(
+func (rd *RealDebrid) CallEndpoint(
 	endpoint string,
 	method string,
 	body map[string]string,
-	app *pocketbase.PocketBase,
 ) (any, http.Header, int) {
 
 	var data any
@@ -110,8 +116,8 @@ func CallEndpoint(
 		request.SetFormData(body)
 	}
 
-	rd := settings.GetRealDebrid(app)
-	request.SetHeader("Authorization", "Bearer "+rd.AccessToken)
+	rdsets := rd.settings.GetRealDebrid()
+	request.SetHeader("Authorization", "Bearer "+rdsets.AccessToken)
 
 	request.Attempt = 3
 
@@ -157,11 +163,11 @@ func CallEndpoint(
 
 }
 
-func Unrestrict(m string, app *pocketbase.PocketBase) map[string]any {
-	magnet, _, _ := CallEndpoint("/torrents/addMagnet", "POST", map[string]string{
+func (rd *RealDebrid) Unrestrict(m string) map[string]any {
+	magnet, _, _ := rd.CallEndpoint("/torrents/addMagnet", "POST", map[string]string{
 		"host":   "real-debrid.com",
 		"magnet": m,
-	}, app)
+	})
 
 	if magnet == nil || magnet.(map[string]any)["id"] == nil {
 		return nil
@@ -169,18 +175,17 @@ func Unrestrict(m string, app *pocketbase.PocketBase) map[string]any {
 
 	magnetId := magnet.(map[string]any)["id"].(string)
 
-	defer CallEndpoint(
+	defer rd.CallEndpoint(
 		fmt.Sprintf("/torrents/delete/%s", magnetId),
 		"DELETE",
 		nil,
-		app,
 	)
 
-	CallEndpoint("/torrents/selectFiles/"+magnetId, "POST", map[string]string{
+	rd.CallEndpoint("/torrents/selectFiles/"+magnetId, "POST", map[string]string{
 		"files": "all",
-	}, app)
+	})
 
-	info, _, _ := CallEndpoint("/torrents/info/"+magnetId, "GET", nil, app)
+	info, _, _ := rd.CallEndpoint("/torrents/info/"+magnetId, "GET", nil)
 
 	if info == nil {
 		return nil
@@ -194,9 +199,9 @@ func Unrestrict(m string, app *pocketbase.PocketBase) map[string]any {
 
 	for _, v := range links {
 		log.Debug("realdebrid unrestricted", "link", v.(string))
-		u, _, _ := CallEndpoint("/unrestrict/link", "POST", map[string]string{
+		u, _, _ := rd.CallEndpoint("/unrestrict/link", "POST", map[string]string{
 			"link": v.(string),
-		}, app)
+		})
 		if u == nil {
 			continue
 		}
@@ -220,6 +225,6 @@ func Unrestrict(m string, app *pocketbase.PocketBase) map[string]any {
 	return nil
 }
 
-func Cleanup(app *pocketbase.PocketBase) {
-	RemoveByType(app, "downloads")
+func (rd *RealDebrid) Cleanup() {
+	rd.RemoveByType("downloads")
 }

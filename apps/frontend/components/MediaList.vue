@@ -5,7 +5,7 @@
 	<div v-if="data.length === 0 && !loading" class="text-center h-80">
 		<div class="border opacity-30 border-dashed p-3 rounded-lg">No items</div>
 	</div>
-	<div v-else class="flex overflow-y-scroll gap-4 h-80">
+	<div v-else class="flex overflow-y-scroll overflow-y-hidden gap-4 h-90 mediawrapper">
 		<NuxtLink :to="useMedia().getLink(item)" v-for="item in data" @click="useMedia().setDetail(item)" class="no-underline">
 			<div class="card w-32 bg-base-300 shadow-md flex-shrink-0 rounded-md h-80">
 				<figure class="m-0 p-0">
@@ -23,6 +23,15 @@
 		</NuxtLink>
 	</div>
 </template>
+
+<style scoped>
+	.mediawrapper {
+		scroll-snap-type: x mandatory;
+	}
+	.card {
+		scroll-snap-align: start;
+	}
+</style>
 <script lang="ts" setup>
 	const props = defineProps({
 		url: String,

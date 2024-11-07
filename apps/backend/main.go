@@ -19,6 +19,7 @@ import (
 	"github.com/odin-movieshow/server/imdb"
 	"github.com/odin-movieshow/server/realdebrid"
 	"github.com/odin-movieshow/server/scraper"
+	"github.com/odin-movieshow/server/settings"
 	"github.com/odin-movieshow/server/tmdb"
 	"github.com/odin-movieshow/server/trakt"
 
@@ -129,6 +130,12 @@ func main() {
 
 	// serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		settings := settings.New(app)
+		helpers := helpers.New(app)
+		tmdb := tmdb.New(app, settings, helpers)
+		trakt := trakt.New(app, tmdb, settings, helpers)
+		realdebrid := realdebrid.New(app, settings)
+		scraper := scraper.New(app, settings, helpers, realdebrid)
 
 		email := "admin@odin.local"
 		if os.Getenv("ADMIN_EMAIL") != "" {
@@ -149,14 +156,14 @@ func main() {
 
 		scheduler := cron.New()
 		scheduler.MustAdd("hourly", "0 * * * *", func() {
-			trakt.RefreshTokens(app)
-			realdebrid.RefreshTokens(app)
-			trakt.SyncHistory(app)
+			trakt.RefreshTokens()
+			realdebrid.RefreshTokens()
+			trakt.SyncHistory()
 
 		})
 
 		scheduler.MustAdd("daily", "0 4 * * *", func() {
-			realdebrid.Cleanup(app)
+			realdebrid.Cleanup()
 		})
 
 		scheduler.Start()
@@ -168,7 +175,7 @@ func main() {
 		e.Router.POST("/scrape", func(c echo.Context) error {
 			mq := mqttclient()
 			log.Debug("Scraping")
-			scraper.GetLinks(apis.RequestInfo(c).Data, app, mq)
+			scraper.GetLinks(apis.RequestInfo(c).Data, mq)
 			mq.Disconnect(0)
 			return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 		}, RequireDeviceOrRecordAuth(app))
@@ -263,7 +270,7 @@ func main() {
 
 			if strings.Contains(url, "scrobble/stop") {
 				go func() {
-					trakt.SyncHistory(app)
+					trakt.SyncHistory()
 				}()
 			}
 			url = helpers.ParseDates(url)
@@ -291,7 +298,7 @@ func main() {
 
 		e.Router.Any("/_realdebrid/*", func(c echo.Context) error {
 			url := strings.ReplaceAll(c.Request().URL.String(), "/_realdebrid", "")
-			result, headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil, app)
+			result, headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil)
 
 			for k, v := range headers {
 				if funk.Contains([]string{
@@ -309,7 +316,7 @@ func main() {
 		e.Router.GET("/traktseasons/:id", func(c echo.Context) error {
 			fmt.Println(c.PathParam("id"))
 			id, _ := strconv.Atoi(c.PathParam("id"))
-			res := trakt.GetSeasons(app, id)
+			res := trakt.GetSeasons(id)
 			return c.JSON(http.StatusOK, res)
 		}, RequireDeviceOrRecordAuth(app))
 

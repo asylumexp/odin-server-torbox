@@ -26,23 +26,31 @@ type RealDebridSettings struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func GetRealDebrid(app *pocketbase.PocketBase) *RealDebridSettings {
-	s := getSettings(app)
+type Settings struct {
+	app *pocketbase.PocketBase
+}
+
+func New(app *pocketbase.PocketBase) *Settings {
+	return &Settings{app: app}
+}
+
+func (s *Settings) GetRealDebrid() *RealDebridSettings {
+	sets := s.getSettings()
 	if s != nil {
 		r := RealDebridSettings{}
-		if err := s.UnmarshalJSONField("real_debrid", &r); err == nil {
+		if err := sets.UnmarshalJSONField("real_debrid", &r); err == nil {
 			return &r
 		}
 	}
 	return nil
 }
 
-func GetTrakt(app *pocketbase.PocketBase) *TraktSettings {
-	s := getSettings(app)
+func (s *Settings) GetTrakt() *TraktSettings {
+	sets := s.getSettings()
 	if s != nil {
 		t := TraktSettings{}
 
-		if err := s.UnmarshalJSONField("trakt", &t); err == nil {
+		if err := sets.UnmarshalJSONField("trakt", &t); err == nil {
 			return &t
 		}
 	}
@@ -51,31 +59,31 @@ func GetTrakt(app *pocketbase.PocketBase) *TraktSettings {
 
 }
 
-func GetScraperUrl(app *pocketbase.PocketBase) string {
-	s := getSettings(app)
+func (s *Settings) GetScraperUrl() string {
+	sets := s.getSettings()
 	if s != nil {
-		return s.Get("scraper_url").(string)
+		return sets.Get("scraper_url").(string)
 	}
 	return ""
 
 }
 
-func GetTmdb(app *pocketbase.PocketBase) *TmdbSettings {
-	s := getSettings(app)
+func (s *Settings) GetTmdb() *TmdbSettings {
+	sets := s.getSettings()
 	if s != nil {
 		t := TmdbSettings{}
-		if err := s.UnmarshalJSONField("tmdb", &t); err == nil {
+		if err := sets.UnmarshalJSONField("tmdb", &t); err == nil {
 			return &t
 		}
 	}
 	return nil
 }
 
-func GetJackett(app *pocketbase.PocketBase) *JackettSettings {
-	s := getSettings(app)
-	if s != nil {
+func (s *Settings) GetJackett() *JackettSettings {
+	sets := s.getSettings()
+	if sets != nil {
 		j := JackettSettings{}
-		if err := s.UnmarshalJSONField("jackett", &j); err == nil {
+		if err := sets.UnmarshalJSONField("jackett", &j); err == nil {
 			return &j
 		}
 
@@ -83,11 +91,11 @@ func GetJackett(app *pocketbase.PocketBase) *JackettSettings {
 	return nil
 }
 
-func getSettings(app *pocketbase.PocketBase) *models.Record {
-	s := []*models.Record{}
-	app.Dao().RecordQuery("settings").All(&s)
-	if len(s) > 0 {
-		return s[0]
+func (s *Settings) getSettings() *models.Record {
+	sets := []*models.Record{}
+	s.app.Dao().RecordQuery("settings").All(&s)
+	if len(sets) > 0 {
+		return sets[0]
 	}
 	return nil
 }

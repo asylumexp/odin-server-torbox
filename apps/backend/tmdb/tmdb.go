@@ -14,22 +14,32 @@ import (
 	resty "github.com/go-resty/resty/v2"
 )
 
+type Tmdb struct {
+	app      *pocketbase.PocketBase
+	settings *settings.Settings
+	helpers  *helpers.Helpers
+}
+
+func New(app *pocketbase.PocketBase, settings *settings.Settings, helpers *helpers.Helpers) *Tmdb {
+	return &Tmdb{app: app, settings: settings, helpers: helpers}
+}
+
 const (
 	TMDB_URL = "https://api.themoviedb.org/3"
 )
 
-func PopulateTMDB(
+func (t *Tmdb) PopulateTMDB(
 	k int,
 	wg *sync.WaitGroup,
 	mux *sync.Mutex,
 	objmap []any,
-	app *pocketbase.PocketBase,
+
 ) {
 	defer wg.Done()
 	// defer mux.Unlock()
 	// mux.Lock()
-	t := settings.GetTmdb(app)
-	tmdbKey := t.Key
+	tsets := t.settings.GetTmdb()
+	tmdbKey := tsets.Key
 	resource := "movie"
 	tmdbResource := "movie"
 	if objmap[k].(map[string]any)["show"] != nil {
@@ -47,7 +57,7 @@ func PopulateTMDB(
 	id := uint(
 		objmap[k].(map[string]any)[resource].(map[string]any)["ids"].(map[string]any)["tmdb"].(float64),
 	)
-	cache := helpers.ReadTmdbCache(app, id, resource)
+	cache := t.helpers.ReadTmdbCache(id, resource)
 	if cache != nil {
 		objmap[k].(map[string]any)[resource].(map[string]any)["tmdb"] = cache
 		return
@@ -59,7 +69,7 @@ func PopulateTMDB(
 		R()
 	if _, err := request.SetResult(&tmdb).SetHeader("content-type", "application/json").Get(fmt.Sprintf("%s/%s/%d?api_key=%s&append_to_response=credits,videos", TMDB_URL, tmdbResource, id, tmdbKey)); err == nil {
 		log.Debug("tmdb", "resource", resource, "id", id)
-		helpers.WriteTmdbCache(app, id, resource, &tmdb)
+		t.helpers.WriteTmdbCache(id, resource, &tmdb)
 
 		objmap[k].(map[string]any)[resource].(map[string]any)["tmdb"] = tmdb
 		// helpers.WriteTMDBImage(tmdb.(map[string]any)["poster_path"].(string))
@@ -69,10 +79,10 @@ func PopulateTMDB(
 
 }
 
-func GetEpisodes(showId string, seasons []string, app *pocketbase.PocketBase) *[]any {
+func (t *Tmdb) GetEpisodes(showId string, seasons []string, app *pocketbase.PocketBase) *[]any {
 	// '/tv/$showId/season/$season?api_key=$key'
-	t := settings.GetTmdb(app)
-	tmdbKey := t.Key
+	tsets := t.settings.GetTmdb()
+	tmdbKey := tsets.Key
 	var wg sync.WaitGroup
 	res := make([]any, 0)
 

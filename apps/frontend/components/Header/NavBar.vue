@@ -23,11 +23,16 @@
 		<div class="navbar-end">
 			<div class="dropdown dropdown-end">
 				<div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
-					<div class="w-10 rounded-full">
-						<img alt="Tailwind CSS Navbar component" src="https://daisyui.com/images/stock/photo-1534528741775-53994a69daeb.jpg" />
+					<div class="avatar placeholder">
+						<div class="bg-neutral text-neutral-content w-8 rounded-full">
+							<span class="text-xs">{{ initials() }}</span>
+						</div>
 					</div>
 				</div>
 				<ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[50] p-2 shadow bg-base-100 rounded-box w-52">
+					<li>
+						<NuxtLink to="/" class="disabled">Logged in as {{ useProfile().me?.username }}</NuxtLink>
+					</li>
 					<li>
 						<NuxtLink to="/profile"><FaIcon icon="user" /> Profile </NuxtLink>
 					</li>
@@ -57,6 +62,8 @@
 		usePb().authStore.clear()
 		return navigateTo('/login')
 	}
+
+	const initials = () => useProfile().me?.username?.slice(0, 1).toUpperCase()
 
 	async function linkDevice() {}
 </script>
