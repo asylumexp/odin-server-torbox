@@ -122,7 +122,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	conf := pocketbase.Config{}
+	conf := pocketbase.Config{
+		DefaultDev: true,
+	}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Automigrate: true,
