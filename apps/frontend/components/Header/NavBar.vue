@@ -31,10 +31,7 @@
 				</div>
 				<ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[50] p-2 shadow bg-base-100 rounded-box w-52">
 					<li>
-						<NuxtLink to="/" class="disabled">Logged in as {{ useProfile().me?.username }}</NuxtLink>
-					</li>
-					<li>
-						<NuxtLink to="/profile"><FaIcon icon="user" /> Profile </NuxtLink>
+						<NuxtLink to="/profile"><FaIcon icon="user" /> Profile ({{ useProfile().me?.username }}) </NuxtLink>
 					</li>
 					<li>
 						<NuxtLink to="/settings"><FaIcon icon="gears" />Settings</NuxtLink>

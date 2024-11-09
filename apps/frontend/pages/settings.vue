@@ -1,13 +1,14 @@
 <template>
 	<div>
 		<h1>Settings</h1>
-		<h2>Sections</h2>
-		<button class="btn btn-primary mb-10" @click="saveSections()">Save sections</button>
-		<div class="grid grid-cols-2">
+
+		<button class="btn btn-primary" @click="saveSections()">Save sections</button>
+		<div class="grid grid-cols-2 gap-10">
 			<div>
+				<h2>Sections</h2>
 				<section v-for="(_, k) in sections" class="border border-dashed border-slate-700 mb-5 p-4">
 					<h3>{{ k }}</h3>
-					<draggable v-model="sections[k]" item-key="id" handle=".handle">
+					<draggable v-model="sections[k]" :group="k" item-key="id" handle=".handle" ghost-class="ghost">
 						<template #item="{ element, index }">
 							<div class="flex mb-2">
 								<FaIcon icon="list" class="handle mt-2 mr-2 opacity-30" size="sm" />
@@ -31,15 +32,36 @@
 					<button class="btn" @click="addSection(k)">Add</button>
 				</section>
 			</div>
-			<div>TEST</div>
+			<div>
+				<h2>Templates</h2>
+				<draggable v-model="templates" :group="{ name: 'movies', pull: 'clone', put: false }" item-key="id" handle=".handle" ghost-class="ghost">
+					<template #item="{ element, index }">
+						<div class="flex mb-2">
+							<FaIcon icon="list" class="handle mt-2 mr-2 opacity-30" size="sm" />
+							<span>Title: {{ element.title }} - URL: {{ element.url }}</span>
+						</div>
+					</template>
+				</draggable>
+			</div>
 		</div>
 	</div>
 </template>
+
+<style scoped>
+	.ghost {
+		@apply bg-primary bg-opacity-10;
+	}
+</style>
 
 <script lang="ts" setup>
 	const me = useProfile().me
 	let sections = me['trakt_sections']
 	import draggable from 'vuedraggable'
+
+	const templates = [
+		{ title: 'Movies', url: '/movies', big: false, paginate: false },
+		{ title: 'Shows', url: '/movies', big: false, paginate: false },
+	]
 
 	if (sections === null) {
 		sections = {
