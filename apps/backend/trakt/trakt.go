@@ -38,6 +38,22 @@ type Trakt struct {
 	FetchSeasons bool
 }
 
+type Item struct {
+	IDS   map[string]any `json:"ids"`
+	Type  string         `json:"type"`
+	Name  string         `json:"name"`
+	Year  int            `json:"year"`
+	Title string         `json:"title"`
+}
+
+type Movie struct {
+	Item
+}
+
+type Show struct {
+	Item
+}
+
 func New(app *pocketbase.PocketBase, tmdb *tmdb.Tmdb, settings *settings.Settings, helpers *helpers.Helpers) *Trakt {
 	return &Trakt{
 		app:          app,

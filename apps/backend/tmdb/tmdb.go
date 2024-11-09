@@ -67,7 +67,6 @@ func (t *Tmdb) PopulateTMDB(
 		SetRetryWaitTime(time.Second).
 		R()
 	if _, err := request.SetResult(&tmdb).SetHeader("content-type", "application/json").Get(fmt.Sprintf("%s/%s/%d?api_key=%s&append_to_response=credits,videos", TMDB_URL, tmdbResource, id, tmdbKey)); err == nil {
-		log.Debug("tmdb", "resource", resource, "id", id)
 		t.helpers.WriteTmdbCache(id, resource, &tmdb)
 
 		objmap[k].(map[string]any)[resource].(map[string]any)["tmdb"] = tmdb

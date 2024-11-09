@@ -55,9 +55,6 @@
 </template>
 
 <script lang="ts" setup>
-	import AutoComplete from 'primevue/autocomplete'
-	const found = ref()
-
 	async function logout() {
 		usePb().authStore.clear()
 		return navigateTo('/login')

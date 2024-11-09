@@ -1,6 +1,8 @@
 export default defineNuxtRouteMiddleware(async (to, from) => {
+	console.log('AUTH', usePb().authStore.isValid)
 	if (process.server) return
 	if (usePb().authStore.isValid && ['/login'].includes(to.path)) {
+		console.log('SHOULD LOGIN')
 		if (usePb().authStore.isAdmin) {
 			return navigateTo('/admin')
 		}
