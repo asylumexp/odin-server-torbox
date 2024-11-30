@@ -5,10 +5,10 @@
     <table class="table table-zebra">
       <thead>
         <tr></tr>
-        <th></th>
-        <th>Username</th>
-        <th>Email</th>
-        <th></th>
+        <td></td>
+        <td>Username</td>
+        <td>Email</td>
+        <td></td>
       </thead>
       <tr v-for="user in users" :key="user.id">
         <td>{{ user.id }}</td>

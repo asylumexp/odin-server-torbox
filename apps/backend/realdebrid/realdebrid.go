@@ -84,6 +84,9 @@ func (rd *RealDebrid) RefreshTokens() {
 		"code":          rdsets.RefreshToken,
 		"grant_type":    "http://oauth.net/grant_type/device/1.0",
 	}).SetResult(&data).Post("https://api.real-debrid.com/oauth/v2/token"); err == nil {
+		if data["access_token"] == nil || data["refresh_token"] == nil {
+			return
+		}
 		rdsets.AccessToken = data["access_token"].(string)
 		rdsets.RefreshToken = data["refresh_token"].(string)
 		r.Set("real_debrid", rdsets)

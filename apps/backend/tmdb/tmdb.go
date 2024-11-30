@@ -66,10 +66,48 @@ func (t *Tmdb) PopulateTMDB(
 		SetTimeout(time.Second * 30).
 		SetRetryWaitTime(time.Second).
 		R()
-	if _, err := request.SetResult(&tmdb).SetHeader("content-type", "application/json").Get(fmt.Sprintf("%s/%s/%d?api_key=%s&append_to_response=credits,videos", TMDB_URL, tmdbResource, id, tmdbKey)); err == nil {
+	if _, err := request.SetResult(&tmdb).SetHeader("content-type", "application/json").Get(fmt.Sprintf("%s/%s/%d?api_key=%s&append_to_response=credits,videos,images", TMDB_URL, tmdbResource, id, tmdbKey)); err == nil {
 		log.Debug("tmdb", "resource", resource, "id", id)
-		t.helpers.WriteTmdbCache(id, resource, &tmdb)
+		// remove crew
+		if tmdb == nil {
+			return
+		}
+		if tmdb.(map[string]any)["credits"] != nil &&
+			tmdb.(map[string]any)["credits"].(map[string]any)["crew"] != nil {
+			tmdb.(map[string]any)["credits"].(map[string]any)["crew"] = []any{}
+		}
+		if tmdb.(map[string]any)["credits"] != nil &&
+			tmdb.(map[string]any)["credits"].(map[string]any)["cast"].([]any) != nil {
+			// strip down cast
+			cast := tmdb.(map[string]any)["credits"].(map[string]any)["cast"].([]any)
+			// sort.Slice(cast[:], func(i, j int) bool {
+			// 	return cast[i].(map[string]any)["popularity"].(float64) > cast[j].(map[string]any)["popularity"].(float64)
+			// })
+			castlen := len(cast)
+			if castlen > 15 {
+				castlen = 15
+			}
+			tmdb.(map[string]any)["credits"].(map[string]any)["cast"] = cast[0:castlen]
+		}
 
+		if tmdb.(map[string]any)["images"] != nil &&
+			tmdb.(map[string]any)["images"].(map[string]any)["logos"] != nil {
+
+			for _, l := range tmdb.(map[string]any)["images"].(map[string]any)["logos"].([]any) {
+				if l.(map[string]any)["iso_639_1"] != nil &&
+					l.(map[string]any)["iso_639_1"].(string) == "en" {
+					tmdb.(map[string]any)["logo_path"] = l.(map[string]any)["file_path"]
+					break
+				}
+			}
+			tmdb.(map[string]any)["images"] = nil
+
+			tmdb.(map[string]any)["images"] = nil
+		} else {
+			tmdb.(map[string]any)["logo_path"] = ""
+		}
+
+		t.helpers.WriteTmdbCache(id, resource, &tmdb)
 		objmap[k].(map[string]any)[resource].(map[string]any)["tmdb"] = tmdb
 		// helpers.WriteTMDBImage(tmdb.(map[string]any)["poster_path"].(string))
 	} else {
