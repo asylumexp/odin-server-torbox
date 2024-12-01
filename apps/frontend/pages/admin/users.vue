@@ -4,11 +4,12 @@
 
     <table class="table table-zebra">
       <thead>
-        <tr></tr>
+        <tr>
         <td></td>
         <td>Username</td>
         <td>Email</td>
         <td></td>
+        </tr>
       </thead>
       <tr v-for="user in users" :key="user.id">
         <td>{{ user.id }}</td>
