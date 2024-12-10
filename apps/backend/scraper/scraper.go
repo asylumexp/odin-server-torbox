@@ -52,7 +52,8 @@ func (s *Scraper) GetLinks(data map[string]any, mqt mqtt.Client) {
 		indexertopic += "/" + data["trakt"].(string)
 	}
 
-	log.Debug("MQTT", "topic", indexertopic)
+	log.Debug("MQTT", "indexer topic", indexertopic)
+	log.Debug("MQTT", "result topic", topic)
 	torrentQueue := make(chan types.Torrent)
 
 	allTorrentsUnrestricted := s.helpers.ReadRDCacheByResource(topic)
@@ -77,8 +78,6 @@ func (s *Scraper) GetLinks(data map[string]any, mqt mqtt.Client) {
 		log.Error("mqtt-subscribe-indexer", "error", token.Error())
 	}
 
-	log.Debug(data)
-
 	res := resty.New().SetTimeout(15*time.Minute).
 		R().
 		SetBody(data).
@@ -94,7 +93,6 @@ func (s *Scraper) GetLinks(data map[string]any, mqt mqtt.Client) {
 					s.unrestrict(k, mqt, topic)
 					done = append(done, k.Magnet)
 				}
-
 			}
 		}
 	}()
@@ -107,69 +105,6 @@ func (s *Scraper) GetLinks(data map[string]any, mqt mqtt.Client) {
 
 	<-torrentQueue
 	log.Warn("DONE")
-	// for _, k := range allTorrents {
-
-	// 	q1s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
-	// 		return t.Quality == "4K" && len(t.RealDebrid) > 0
-	// 	}).([]types.Torrent)
-
-	// 	q2s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
-	// 		return t.Quality == "1080p" && len(t.RealDebrid) > 0
-	// 	}).([]types.Torrent)
-
-	// 	q3s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
-	// 		return t.Quality == "720p" && len(t.RealDebrid) > 0
-	// 	}).([]types.Torrent)
-
-	// 	q4s := funk.Filter(allTorrentsUnrestricted, func(t types.Torrent) bool {
-	// 		return t.Quality == "SD" && len(t.RealDebrid) > 0
-	// 	}).([]types.Torrent)
-
-	// 	if k.Quality == "1080p" {
-	// 		if len(q2s) > 20 {
-	// 			continue
-	// 		}
-	// 	}
-
-	// 	if k.Quality == "720p" {
-	// 		if len(q1s)+len(q2s) > 30 {
-	// 			continue
-	// 		}
-	// 		if len(q3s) > 10 {
-	// 			continue
-	// 		}
-	// 	}
-	// 	if k.Quality == "SD" {
-	// 		if len(q1s)+len(q2s) > 30 {
-	// 			continue
-	// 		}
-	// 		if len(q4s) > 10 {
-	// 			continue
-	// 		}
-	// 	}
-
-	// 	cache := helpers.ReadRDCache(app, topic, k.Magnet)
-	// 	if cache != nil {
-	// 		// allTorrentsUnrestricted = append(allTorrentsUnrestricted, *cache)
-	// 		// cstr, _ := json.Marshal(cache)
-	// 		// mqtt.Publish(topic, 0, false, cstr)
-	// 		continue
-	// 	}
-
-	// 	continue
-
-	// 	u := realdebrid.Unrestrict(k.Magnet, app)
-	// 	k.RealDebrid = append(k.RealDebrid, u)
-
-	// 	if len(k.RealDebrid) > 0 {
-	// 		allTorrentsUnrestricted = append(allTorrentsUnrestricted, k)
-	// 		helpers.WriteRDCache(app, topic, k.Magnet, k)
-	// 		kstr, _ := json.Marshal(k)
-	// 		mqt.Publish(topic, 0, false, kstr)
-	// 	}
-	// 	// mux.Unlock()
-	// }
-
 }
 
 func (s *Scraper) unrestrict(
@@ -177,7 +112,6 @@ func (s *Scraper) unrestrict(
 	mqt mqtt.Client,
 	topic string,
 ) {
-
 	cache := s.helpers.ReadRDCache(topic, k.Magnet)
 	if cache != nil {
 		cstr, _ := json.Marshal(cache)
@@ -194,6 +128,7 @@ func (s *Scraper) unrestrict(
 	if len(k.RealDebrid) > 0 {
 		s.helpers.WriteRDCache(topic, k.Magnet, k)
 		kstr, _ := json.Marshal(k)
+		log.Warn(topic)
 		mqt.Publish(topic, 0, false, kstr)
 	}
 }

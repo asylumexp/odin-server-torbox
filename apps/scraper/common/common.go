@@ -144,7 +144,6 @@ func SeparateByQuality(torrents []Torrent, payload Payload) []Torrent {
 	ret = append(ret, res["720p"]...)
 	ret = append(ret, res["SD"]...)
 	return ret
-
 }
 
 func Dedupe(torrents []Torrent) []Torrent {
@@ -160,7 +159,6 @@ func Dedupe(torrents []Torrent) []Torrent {
 }
 
 func GetInfos(title string) ([]string, string) {
-
 	title = strings.ToLower(title)
 
 	res := []string{}
@@ -223,7 +221,6 @@ func GetInfos(title string) ([]string, string) {
 		"HDTV":   {"hdtv"},
 		"PDTV":   {"pdtv"},
 		"CAMQUALITY": {
-
 			" cam ", "camrip", "cam rip",
 			"hdcam", "hd cam",
 			" ts ", " ts1", " ts7",

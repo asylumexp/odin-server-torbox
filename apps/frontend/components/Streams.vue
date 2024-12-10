@@ -76,7 +76,7 @@
 	}
 	const streams_dialog = ref<HTMLDialogElement>()
 
-	const data = ref<any[]>([])
+	const data = ref<{ quality: string }[]>([])
 
 	function humanFileSize(size: number): number | string {
 		var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024))
@@ -111,9 +111,8 @@
 	watch(
 		() => useStreams().triggerModal,
 		async () => {
-			console.log('dialog open')
 			streams_dialog.value?.showModal()
-			data.value = (await useStreams().getStreams()) || []
+			await useStreams().getStreams()
 		}
 	)
 

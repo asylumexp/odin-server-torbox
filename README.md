@@ -13,6 +13,9 @@ Odin
 
 Odin is a self-hostable solution to watch movies and TV shows.
 
+[] Test
+[x] Best
+
 ## Key features
 
 - Discover movies and shows
@@ -25,7 +28,7 @@ Odin is a self-hostable solution to watch movies and TV shows.
 ## Prerequisites
 
 - A Trakt API account
-  - Create a new App: https://trakt.tv/oauth/applications/new
+  - Create a new App: <https://trakt.tv/oauth/applications/new>
   - Not down the Trakt `clientId` and `clientSecret`
 - TMDB account
   - Note down the `apiKey`
@@ -74,7 +77,7 @@ services:
 ## Configuration
 
 - Login as Admin
-  - **User:** admin@odin.local, **Password:** adminOdin1
+  - **User:** <admin@odin.local>, **Password:** adminOdin1
   - Connect to RealDebrid
   - Fill in the inputs for Trakt, TMDB, etc.
   - Create a user

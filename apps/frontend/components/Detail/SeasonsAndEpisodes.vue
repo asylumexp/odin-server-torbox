@@ -68,7 +68,6 @@
 	onMounted(async () => {
 		if (tmdbSeasons.value.length === 0) {
 			tmdbSeasons.value = await usePb().send('/tmdbseasons/' + item.ids.tmdb + '?seasons=' + item.seasons.map((s: any) => s.number).join(','), { method: 'GET' })
-			console.log(tmdbSeasons.value)
 		}
 	})
 

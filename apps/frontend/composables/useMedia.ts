@@ -60,10 +60,15 @@ export const useMedia = defineStore('useMedia', () => {
 
 	const getList = async (url: string) => {
 		if (!lists.value[url]) {
-			lists.value[url] = await usePb().send(`/_trakt${url}`, {
-				method: 'GET',
-				cache: 'no-cache',
-			})
+			try {
+				const res = await usePb().send(`/_trakt${url}`, {
+					method: 'GET',
+					cache: 'no-cache',
+				})
+				lists.value[url] = res
+			} catch (e) {
+				lists.value[url] = []
+			}
 		}
 		return lists.value[url]
 	}

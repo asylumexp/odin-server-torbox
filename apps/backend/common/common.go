@@ -2,14 +2,17 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/log"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 func ParseDates(str string) string {
-
 	re := regexp.MustCompile("::(year|month|day):(\\+|-)?(\\d+)?:")
 
 	matches := re.FindAllStringSubmatch(str, -1)
@@ -68,4 +71,24 @@ func daysInMonth(t time.Time) int {
 	d := days[len(days)-1]
 	d += 1
 	return d
+}
+
+func MqttClient() mqtt.Client {
+	// mqtt.DEBUG = stdlog.New(os.Stdout, "", 0)
+	// mqtt.ERROR = stdlog.New(os.Stdout, "", 0)
+	opts := mqtt.NewClientOptions().
+		AddBroker(os.Getenv("MQTT_URL")).
+		SetUsername(os.Getenv("MQTT_USER")).
+		SetPassword(os.Getenv("MQTT_PASSWORD"))
+	opts.SetKeepAlive(2 * time.Second)
+	opts.SetPingTimeout(1 * time.Second)
+
+	c := mqtt.NewClient(opts)
+	if token := c.Connect(); token.Wait() && token.Error() != nil {
+		log.Error("MQTT", "conneced", c.IsConnected())
+	} else {
+		log.Info("MQTT", "connected", c.IsConnected(), "url", os.Getenv("MQTT_URL"))
+	}
+
+	return c
 }

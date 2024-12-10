@@ -113,7 +113,6 @@ func (t *Tmdb) PopulateTMDB(
 	} else {
 		fmt.Println("TMDB", "Response", err)
 	}
-
 }
 
 func (t *Tmdb) GetEpisodes(showId string, seasons []string) *[]any {

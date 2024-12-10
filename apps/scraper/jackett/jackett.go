@@ -62,12 +62,10 @@ func (indexer *Indexer) HasMovieParam(param string) bool {
 }
 
 func (indexer *Indexer) HasTvParam(param string) bool {
-
 	return strings.Contains(indexer.Caps.Searching.TvSearch.SupportedParams, param)
 }
 
 func Search(c *fiber.Ctx) error {
-
 	mq := common.Mqttclient()
 
 	payload := common.Payload{}
@@ -84,6 +82,13 @@ func Search(c *fiber.Ctx) error {
 	allTorrents := []common.Torrent{}
 	l := log.Debug
 	wg := sync.WaitGroup{}
+	indexertopic := "odin-movieshow/indexer/" + payload.Type
+	if payload.Type == "episode" {
+		indexertopic += "/" + payload.EpisodeTrakt
+	} else {
+		indexertopic += "/" + payload.Trakt
+	}
+	log.Debug("MQTT", "topic", indexertopic)
 	for _, indexer := range indexers {
 		wg.Add(1)
 		go func(indexer Indexer) {
@@ -105,12 +110,6 @@ func Search(c *fiber.Ctx) error {
 				"took",
 				fmt.Sprintf("%.1fs", t2.Sub(t1).Seconds()),
 			)
-			indexertopic := "odin-movieshow/indexer/" + payload.Type
-			if payload.Type == "episode" {
-				indexertopic += "/" + payload.EpisodeTrakt
-			} else {
-				indexertopic += "/" + payload.Trakt
-			}
 			if ts != nil {
 				tsstr, _ := json.Marshal(ts)
 				mq.Publish(
@@ -125,6 +124,7 @@ func Search(c *fiber.Ctx) error {
 	}
 
 	wg.Wait()
+	log.Info("DONE SCRAPING")
 	dedupe := common.Dedupe(allTorrents)
 	filtered := common.SeparateByQuality(dedupe, payload)
 	log.Info("torrents", "total", len(allTorrents), "dedupe", len(filtered))
@@ -156,7 +156,6 @@ func getIndexerList(payload common.Payload) []Indexer {
 			jackettKey,
 		),
 	)
-
 	if err != nil {
 		log.Error("getting indexers", "error", err.Error())
 		return []Indexer{}
@@ -168,7 +167,6 @@ func getIndexerList(payload common.Payload) []Indexer {
 
 	neededIndexers := []Indexer{}
 	for _, indexer := range indexers.Indexers {
-
 		for _, category := range indexer.Caps.Categories.Category {
 			if category.Name == cat {
 				neededIndexers = append(neededIndexers, indexer)
@@ -278,7 +276,6 @@ func getTorrents(indexer Indexer, payload common.Payload) []common.Torrent {
 		query,
 	)
 	resp, err := request.Get(url)
-
 	if err != nil {
 		log.Error("get request", "indexer", indexer.Id, "error", err.Error())
 		return torrents

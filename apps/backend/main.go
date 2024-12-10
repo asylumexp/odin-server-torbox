@@ -3,16 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	stdlog "log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/charmbracelet/log"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/joho/godotenv"
 	"github.com/odin-movieshow/backend/common"
 	"github.com/odin-movieshow/backend/helpers"
@@ -33,25 +30,25 @@ import (
 	"github.com/thoas/go-funk"
 )
 
-func mqttclient() mqtt.Client {
-	// mqtt.DEBUG = stdlog.New(os.Stdout, "", 0)
-	mqtt.ERROR = stdlog.New(os.Stdout, "", 0)
-	opts := mqtt.NewClientOptions().
-		AddBroker(os.Getenv("MQTT_URL")).
-		SetUsername(os.Getenv("MQTT_USER")).
-		SetPassword(os.Getenv("MQTT_PASSWORD"))
-	opts.SetKeepAlive(2 * time.Second)
-	opts.SetPingTimeout(1 * time.Second)
-
-	c := mqtt.NewClient(opts)
-	if token := c.Connect(); token.Wait() && token.Error() != nil {
-		log.Error("MQTT", "conneced", c.IsConnected())
-	} else {
-		log.Info("MQTT", "connected", c.IsConnected(), "url", os.Getenv("MQTT_URL"))
-	}
-
-	return c
-}
+// func mqttclient() mqtt.Client {
+// 	// mqtt.DEBUG = stdlog.New(os.Stdout, "", 0)
+// 	mqtt.ERROR = stdlog.New(os.Stdout, "", 0)
+// 	opts := mqtt.NewClientOptions().
+// 		AddBroker(os.Getenv("MQTT_URL")).
+// 		SetUsername(os.Getenv("MQTT_USER")).
+// 		SetPassword(os.Getenv("MQTT_PASSWORD"))
+// 	opts.SetKeepAlive(2 * time.Second)
+// 	opts.SetPingTimeout(1 * time.Second)
+//
+// 	c := mqtt.NewClient(opts)
+// 	if token := c.Connect(); token.Wait() && token.Error() != nil {
+// 		log.Error("MQTT", "conneced", c.IsConnected())
+// 	} else {
+// 		log.Info("MQTT", "connected", c.IsConnected(), "url", os.Getenv("MQTT_URL"))
+// 	}
+//
+// 	return c
+// }
 
 func getDevice(app *pocketbase.PocketBase, c echo.Context) (*models.Record, error) {
 	device := c.Request().Header.Get("Device")
@@ -130,7 +127,6 @@ func main() {
 
 	// serves static files from the provided public dir (if exists)
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-
 		settings := settings.New(app)
 		helpers := helpers.New(app)
 		tmdb := tmdb.New(app, settings, helpers)
@@ -160,7 +156,6 @@ func main() {
 			trakt.RefreshTokens()
 			realdebrid.RefreshTokens()
 			trakt.SyncHistory()
-
 		})
 
 		scheduler.MustAdd("daily", "0 4 * * *", func() {
@@ -174,10 +169,9 @@ func main() {
 
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
 		e.Router.POST("/scrape", func(c echo.Context) error {
-			mq := mqttclient()
+			mq := common.MqttClient()
 			log.Debug("Scraping")
 			scraper.GetLinks(apis.RequestInfo(c).Data, mq)
-			mq.Disconnect(0)
 			return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 		}, RequireDeviceOrRecordAuth(app))
 
@@ -222,15 +216,11 @@ func main() {
 			if err == nil {
 				for _, t := range []string{"home", "movies", "shows"} {
 					s := sections[t].([]any)
-					if s != nil {
-						for i := range s {
-							sections[t].([]any)[i].(map[string]any)["title"] = common.ParseDates(
-								sections[t].([]any)[i].(map[string]any)["title"].(string),
-							)
-							sections[t].([]any)[i].(map[string]any)["url"] = common.ParseDates(
-								sections[t].([]any)[i].(map[string]any)["url"].(string),
-							)
-						}
+					for i := range s {
+						title := common.ParseDates(sections[t].([]any)[i].(map[string]any)["title"].(string))
+						url := common.ParseDates(sections[t].([]any)[i].(map[string]any)["url"].(string))
+						sections[t].([]any)[i].(map[string]any)["title"] = title
+						sections[t].([]any)[i].(map[string]any)["url"] = url
 					}
 
 				}
@@ -245,7 +235,6 @@ func main() {
 		}, RequireDeviceOrRecordAuth(app))
 
 		e.Router.Any("/_trakt/*", func(c echo.Context) error {
-
 			info := apis.RequestInfo(c)
 
 			id := info.AuthRecord.Id

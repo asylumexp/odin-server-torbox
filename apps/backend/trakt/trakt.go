@@ -68,7 +68,6 @@ func (t *Trakt) normalize(objmap []any, endpoint string) {
 			objmap[i] = m
 		}
 	}
-
 }
 
 func (t *Trakt) removeDuplicates(objmap []any) []any {
@@ -92,7 +91,6 @@ func (t *Trakt) removeDuplicates(objmap []any) []any {
 	}
 
 	return newmap
-
 }
 
 func (t *Trakt) removeWatched(objmap []any) []any {
@@ -101,7 +99,6 @@ func (t *Trakt) removeWatched(objmap []any) []any {
 		if o.(map[string]any)["episode"].(map[string]any)["watched"] != nil && o.(map[string]any)["episode"].(map[string]any)["watched"].(bool) == true {
 			toRemove = append(toRemove, i)
 		}
-
 	}
 
 	newmap := make([]any, 0)
@@ -113,20 +110,17 @@ func (t *Trakt) removeWatched(objmap []any) []any {
 	}
 
 	return newmap
-
 }
 
 func (t *Trakt) removeSeason0(objmap []any) []any {
 	toKeep := []any{}
 	for _, o := range objmap {
-
 		if o.(map[string]any)["episode"] != nil && o.(map[string]any)["episode"].(map[string]any)["season"] != nil && o.(map[string]any)["episode"].(map[string]any)["season"].(float64) > 0 {
 			toKeep = append(toKeep, o)
 		}
 	}
 
 	return toKeep
-
 }
 
 func (t *Trakt) SyncHistory() {
@@ -174,7 +168,6 @@ func (t *Trakt) syncByType(wg *sync.WaitGroup, typ string, last_history types.Da
 	for i := 1; i <= pages; i++ {
 		wg.Add(1)
 		go func(i int, wg *sync.WaitGroup) {
-
 			defer wg.Done()
 			url += "&page=" + fmt.Sprint(i)
 
@@ -202,10 +195,8 @@ func (t *Trakt) syncByType(wg *sync.WaitGroup, typ string, last_history types.Da
 				t.app.Dao().SaveRecord(record)
 
 			}
-
 		}(i, wg)
 	}
-
 }
 
 func (t *Trakt) RefreshTokens() {
@@ -225,17 +216,15 @@ func (t *Trakt) RefreshTokens() {
 		}
 
 	}
-
 }
 
 func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any, donorm bool) (any, http.Header, int) {
-
 	var objmap any
 
 	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 3).R()
 	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", t.settings.GetTrakt().ClientId)
 	var respHeaders http.Header
-	var status = 200
+	status := 200
 	for k, v := range t.Headers {
 
 		if funk.Contains([]string{"Host", "Connection"}, k) {
@@ -277,9 +266,11 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 	if resp, err := r(fmt.Sprintf("%s%s", TRAKT_URL, endpoint)); err == nil {
 		respHeaders = resp.Header()
 		status = resp.StatusCode()
+		log.Info("trakt fetch", "url", endpoint, "method", method, "status", status)
 		log.Debug("trakt fetch", "url", endpoint, "method", method, "status", status, "body", body, "headers", t.Headers)
 		if status > 299 {
-			log.Error("trakt", "fetch", endpoint, "status", status, "res", string(resp.Body()), "body", body, "headers", respHeaders)
+			// log.Error("trakt", "fetch", endpoint, "status", status, "res", string(resp.Body()), "body", body, "headers", respHeaders)
+			log.Error("trakt", "fetch", endpoint, "status", status)
 		}
 		err := json.Unmarshal(resp.Body(), &objmap)
 		if err != nil {
@@ -336,9 +327,8 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 
 func (t *Trakt) FixEpisodes(result any) []any {
 	if funk.IsCollection(result) {
-
 		result = funk.Map(result, func(m any) any {
-			var item = ""
+			item := ""
 			for _, k := range []string{"episode", "movie", "show"} {
 				if m.(map[string]any)[k] != nil {
 					item = k
@@ -360,11 +350,9 @@ func (t *Trakt) FixEpisodes(result any) []any {
 			}
 			return newM
 		})
-
 	}
 
 	return result.([]any)
-
 }
 
 func (t *Trakt) getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any) {
@@ -412,7 +400,6 @@ type Watched struct {
 }
 
 func (t *Trakt) GetWatched(objmap []any) []any {
-
 	if len(objmap) == 0 {
 		return objmap
 	}
@@ -421,7 +408,6 @@ func (t *Trakt) GetWatched(objmap []any) []any {
 	}
 
 	return t.GetWatchedMovies(objmap)
-
 }
 
 func (t *Trakt) getHistory(htype string) []any {
@@ -502,11 +488,9 @@ func (t *Trakt) GetWatchedSeasonEpisodes(objmap []any) []any {
 		newmap = append(newmap, o)
 	}
 	return newmap
-
 }
 
 func (t *Trakt) GetSeasons(id int) any {
-
 	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
 
 	cache := t.helpers.ReadTraktSeasonCache(uint(id))

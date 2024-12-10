@@ -60,11 +60,13 @@ export const useStreams = defineStore('useStreams', () => {
 			topic.value = `odin-movieshow/episode/${(data.value as EpisodeStream).episode_trakt}`
 		}
 
-		console.log('TOPIC', topic.value)
+		console.log('MQTT', topic.value)
 		mqttClient.subscribe(topic.value)
 		mqttClient.on('message', (topic: string, message: Buffer) => {
-			const m = JSON.parse(message.toString())
-			streams.value = [...streams.value, m]
+			try {
+				const m = JSON.parse(message.toString())
+				streams.value = [...streams.value, m]
+			} catch (_) {}
 		})
 
 		if (!list.value[id]) {
