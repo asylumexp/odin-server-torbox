@@ -128,7 +128,6 @@ func (s *Scraper) unrestrict(
 	if len(k.RealDebrid) > 0 {
 		s.helpers.WriteRDCache(topic, k.Magnet, k)
 		kstr, _ := json.Marshal(k)
-		log.Warn(topic)
 		mqt.Publish(topic, 0, false, kstr)
 	}
 }

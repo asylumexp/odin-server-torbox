@@ -33,10 +33,11 @@
 			await usePb().admins.authWithPassword(email.value, password.value)
 			// await usePb().admins.authWithPassword('admin@odin.local', 'odinAdmin1')
 			window.location.reload(true)
-		} catch (e) {}
+		} catch (_) {}
 
-		await usePb().collection('users').authWithPassword(email.value, password.value)
-		// await usePb().collection('users').authWithPassword('adis', 'odinAdis1')
-		window.location.reload(true)
+		try {
+			await usePb().collection('users').authWithPassword(email.value, password.value)
+			window.location.reload(true)
+		} catch (e) {}
 	}
 </script>

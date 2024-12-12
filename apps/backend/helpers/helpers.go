@@ -69,7 +69,6 @@ func (h *Helpers) WriteTmdbCache(id uint, resource string, data *interface{}) {
 		record.Set("type", resource)
 		h.app.Dao().SaveRecord(record)
 	}
-
 }
 
 func (h *Helpers) WriteTraktSeasonCache(id uint, data *interface{}) {
@@ -90,7 +89,6 @@ func (h *Helpers) WriteTraktSeasonCache(id uint, data *interface{}) {
 		record.Set("trakt_id", id)
 		h.app.Dao().SaveRecord(record)
 	}
-
 }
 
 func (h *Helpers) ReadRDCache(resource string, magnet string) *types.Torrent {
@@ -100,7 +98,7 @@ func (h *Helpers) ReadRDCache(resource string, magnet string) *types.Torrent {
 	if err == nil {
 		err := record.UnmarshalJSONField("data", &res)
 		date := record.GetDateTime("updated")
-		now := time.Now().Add(time.Duration((-2) * time.Hour))
+		now := time.Now().Add(time.Duration((-8) * time.Hour))
 		if err == nil {
 			if date.Time().Before(now) {
 				return nil
@@ -120,7 +118,7 @@ func (h *Helpers) ReadRDCacheByResource(resource string) []types.Torrent {
 		for _, record := range records {
 			var r types.Torrent
 			date := record.GetDateTime("updated")
-			now := time.Now().Add(time.Duration((-2) * time.Hour))
+			now := time.Now().Add(time.Duration((-8) * time.Hour))
 			// add 1 hour to date
 			if date.Time().Before(now) {
 				continue
@@ -130,13 +128,11 @@ func (h *Helpers) ReadRDCacheByResource(resource string) []types.Torrent {
 				res = append(res, r)
 			}
 		}
-
 	}
 	return res
 }
 
 func (h *Helpers) WriteRDCache(resource string, magnet string, data interface{}) {
-
 	log.Info("cache write", "for", "RD", "resource", resource)
 	record, err := h.app.Dao().
 		FindFirstRecordByFilter("rd_resolved", "magnet = {:magnet}", dbx.Params{"magnet": magnet})

@@ -40,6 +40,7 @@
 <script lang="ts" setup>
 	await useSettings().initConfig()
 	await useSettings().init()
+	await useProfile().init()
 	async function logout() {
 		usePb().authStore.clear()
 		return navigateTo('/login')

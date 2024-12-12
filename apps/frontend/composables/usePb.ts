@@ -1,5 +1,5 @@
 import pocketbase, { LocalAuthStore } from 'pocketbase'
 
 export const usePb = () => {
-	return new pocketbase(useRuntimeConfig().public.pbUrl)
+	return new pocketbase(useSettings().config?.pbUrl, new LocalAuthStore('odin'))
 }

@@ -3,9 +3,9 @@ export const useProfile = defineStore('useProfile', () => {
 	async function init() {
 		if (usePb().authStore.isAdmin) {
 			me.value = await usePb().admins.getOne(usePb().authStore.model!.id)
-			return
+		} else {
+			me.value = await usePb().collection('users').getOne(usePb().authStore.model?.id)
 		}
-		me.value = await usePb().collection('users').getOne(usePb().authStore.model?.id)
 	}
 	return {
 		me,

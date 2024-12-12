@@ -1,20 +1,23 @@
 <template>
 	<div>
-		<div v-if="profile">
-			<p>{{ profile.username }}</p>
-			<p>{{ profile.email }}</p>
-			<p>{{ profile.expiration }}</p>
-		</div>
+		<div v-if="rdloading">Loading...</div>
 		<div v-else>
-			<dialog ref="login_dialog" class="modal">
-				<div class="modal-box">
-					<h3 class="font-bold text-lg">Login to RealDebrid</h3>
-					<p class="py-4">Go to: {{ url }}</p>
-					<p class="py-4">Enter code:</p>
-					<p>{{ user_code }}</p>
-				</div>
-			</dialog>
-			<button class="btn" @click="realDebridLogin()">Login</button>
+			<div v-if="profile">
+				<p>{{ profile.username }}</p>
+				<p>{{ profile.email }}</p>
+				<p>{{ profile.expiration }}</p>
+			</div>
+			<div v-else>
+				<dialog ref="login_dialog" class="modal">
+					<div class="modal-box">
+						<h3 class="font-bold text-lg">Login to RealDebrid</h3>
+						<p class="py-4">Go to: {{ url }}</p>
+						<p class="py-4">Enter code:</p>
+						<p>{{ user_code }}</p>
+					</div>
+				</dialog>
+				<button class="btn" @click="realDebridLogin()">Login</button>
+			</div>
 		</div>
 	</div>
 </template>
@@ -22,13 +25,18 @@
 <script lang="ts" setup>
 	const emit = defineEmits(['success'])
 
-	let profile: null | any = null
+	const profile = ref<{ username: string; email: string; expiration: string } | null>(null)
+	const rdloading = ref(true)
 
-	try {
-		profile = await usePb().send('/_realdebrid/user', { method: 'get' })
-	} catch (e) {
-		console.log(e)
-	}
+	onMounted(async () => {
+		try {
+			profile.value = await usePb().send('/_realdebrid/user', { method: 'get' })
+			console.log('DONE')
+		} catch (e) {
+			console.error(e)
+		}
+		rdloading.value = false
+	})
 
 	const host = 'https://api.real-debrid.com/oauth/v2'
 
@@ -39,7 +47,6 @@
 	async function realDebridLogin() {
 		login_dialog.value?.showModal()
 		const res = await useFetch(`${host}/device/code?client_id=X245A4XAIBGVM&=new_credentials=yes`)
-
 		const data = res.data.value as any
 		url.value = data.verification_url
 		user_code.value = data.user_code

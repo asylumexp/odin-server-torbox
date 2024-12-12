@@ -30,26 +30,6 @@ import (
 	"github.com/thoas/go-funk"
 )
 
-// func mqttclient() mqtt.Client {
-// 	// mqtt.DEBUG = stdlog.New(os.Stdout, "", 0)
-// 	mqtt.ERROR = stdlog.New(os.Stdout, "", 0)
-// 	opts := mqtt.NewClientOptions().
-// 		AddBroker(os.Getenv("MQTT_URL")).
-// 		SetUsername(os.Getenv("MQTT_USER")).
-// 		SetPassword(os.Getenv("MQTT_PASSWORD"))
-// 	opts.SetKeepAlive(2 * time.Second)
-// 	opts.SetPingTimeout(1 * time.Second)
-//
-// 	c := mqtt.NewClient(opts)
-// 	if token := c.Connect(); token.Wait() && token.Error() != nil {
-// 		log.Error("MQTT", "conneced", c.IsConnected())
-// 	} else {
-// 		log.Info("MQTT", "connected", c.IsConnected(), "url", os.Getenv("MQTT_URL"))
-// 	}
-//
-// 	return c
-// }
-
 func getDevice(app *pocketbase.PocketBase, c echo.Context) (*models.Record, error) {
 	device := c.Request().Header.Get("Device")
 	return app.Dao().FindRecordById("devices", device)
@@ -119,7 +99,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	conf := pocketbase.Config{}
+	conf := pocketbase.Config{DefaultDev: true}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Automigrate: true,
@@ -138,18 +118,16 @@ func main() {
 		if os.Getenv("ADMIN_EMAIL") != "" {
 			email = os.Getenv("ADMIN_EMAIL")
 		}
-		password := "adminOdin1"
+		password := "odinAdmin1"
 		if os.Getenv("ADMIN_PASSWORD") != "" {
 			password = os.Getenv("ADMIN_PASSWORD")
 		}
 		a, _ := app.Dao().FindAdminByEmail(email)
-		if a != nil {
-			a.SetPassword(password)
-		} else {
+		if a == nil {
 			a = &models.Admin{Email: email}
+			a.SetPassword(password)
+			app.Dao().SaveAdmin(a)
 		}
-		a.SetPassword(password)
-		app.Dao().SaveAdmin(a)
 
 		scheduler := cron.New()
 		scheduler.MustAdd("hourly", "0 * * * *", func() {

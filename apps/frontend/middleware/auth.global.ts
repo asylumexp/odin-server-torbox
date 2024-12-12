@@ -1,7 +1,15 @@
 export default defineNuxtRouteMiddleware(async (to, _) => {
 	if (process.server) return
-	const id = usePb().authStore.model?.id
-	if (usePb().authStore.isValid && (!(await usePb().collection('users').getOne(id)).id || (usePb().authStore.isAdmin && !(await usePb().admins.getOne(id)).id))) {
+	const id = usePb().authStore.model?.id || null
+	console.log('ID', id)
+	console.log('valid', usePb().authStore.isValid)
+	console.log('admin', usePb().authStore.isAdmin)
+	console.log('paths', to.path)
+	if (
+		id !== null &&
+		usePb().authStore.isValid &&
+		((usePb().authStore.isAdmin && !(await usePb().admins.getOne(id))) || (!usePb().authStore.isAdmin && !(await usePb().collection('users').getOne(id))))
+	) {
 		console.log('NO USER')
 		usePb().authStore.clear()
 	}

@@ -55,7 +55,6 @@ func (rd *RealDebrid) RemoveByType(t string) {
 	}
 
 	log.Info("realdebrid cleanup", "type", t, "count", count)
-
 }
 
 func (rd *RealDebrid) RefreshTokens() {
@@ -93,7 +92,6 @@ func (rd *RealDebrid) RefreshTokens() {
 		log.Info("realdebrid", "token", "refreshed")
 		rd.app.Dao().SaveRecord(&r)
 	}
-
 }
 
 func (rd *RealDebrid) CallEndpoint(
@@ -101,14 +99,12 @@ func (rd *RealDebrid) CallEndpoint(
 	method string,
 	body map[string]string,
 ) (any, http.Header, int) {
-
 	var data any
 	request := resty.New().
 		SetRetryCount(3).
-		SetRetryWaitTime(time.Second * 3).
+		SetRetryWaitTime(time.Second * 1).
 		AddRetryCondition(func(r *resty.Response, err error) bool {
 			return r.StatusCode() == 429
-
 		}).
 		R()
 	request.SetResult(&data)
@@ -163,7 +159,6 @@ func (rd *RealDebrid) CallEndpoint(
 	}
 
 	return data, respHeaders, status
-
 }
 
 func (rd *RealDebrid) Unrestrict(m string) map[string]any {
@@ -177,7 +172,6 @@ func (rd *RealDebrid) Unrestrict(m string) map[string]any {
 	}
 
 	magnetId := magnet.(map[string]any)["id"].(string)
-
 	defer rd.CallEndpoint(
 		fmt.Sprintf("/torrents/delete/%s", magnetId),
 		"DELETE",
@@ -201,7 +195,6 @@ func (rd *RealDebrid) Unrestrict(m string) map[string]any {
 	links := info.(map[string]any)["links"].([]any)
 
 	for _, v := range links {
-		log.Debug("realdebrid unrestricted", "link", v.(string))
 		u, _, _ := rd.CallEndpoint("/unrestrict/link", "POST", map[string]string{
 			"link": v.(string),
 		})
