@@ -26,6 +26,13 @@ type RealDebridSettings struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+type AllDebridSettings struct {
+	AccessToken  string `json:"access_token"`
+	ClientId     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 type Settings struct {
 	app *pocketbase.PocketBase
 }
@@ -45,6 +52,17 @@ func (s *Settings) GetRealDebrid() *RealDebridSettings {
 	return nil
 }
 
+func (s *Settings) GetAllDebrid() *AllDebridSettings {
+	sets := s.getSettings()
+	if sets != nil {
+		r := AllDebridSettings{}
+		if err := sets.UnmarshalJSONField("all_debrid", &r); err == nil {
+			return &r
+		}
+	}
+	return nil
+}
+
 func (s *Settings) GetTrakt() *TraktSettings {
 	sets := s.getSettings()
 	if sets != nil {
@@ -56,7 +74,6 @@ func (s *Settings) GetTrakt() *TraktSettings {
 	}
 
 	return nil
-
 }
 
 func (s *Settings) GetScraperUrl() string {
@@ -65,7 +82,6 @@ func (s *Settings) GetScraperUrl() string {
 		return sets.Get("scraper_url").(string)
 	}
 	return ""
-
 }
 
 func (s *Settings) GetTmdb() *TmdbSettings {
