@@ -48,7 +48,6 @@ type Torrent struct {
 	Size         uint64   `json:"size"`
 	ReleaseTitle string   `json:"release_title"`
 	Magnet       string   `json:"magnet"`
-	Url          string   `json:"url"`
 	Name         string   `json:"name"`
 	Quality      string   `json:"quality"`
 	Info         []string `json:"info"`
@@ -150,7 +149,7 @@ func Dedupe(torrents []Torrent) []Torrent {
 	res := []Torrent{}
 	hashes := []string{}
 	for _, t := range torrents {
-		if t.Url != "" && !funk.ContainsString(hashes, t.Hash) {
+		if t.Magnet != "" && !funk.ContainsString(hashes, t.Hash) {
 			res = append(res, t)
 			hashes = append(hashes, t.Hash)
 		}
@@ -286,6 +285,7 @@ func GetInfos(title string) ([]string, string) {
 	if funk.Contains(res, "1080p") {
 		quality = "1080p"
 	}
+
 	if funk.Contains(res, "4K") {
 		quality = "4K"
 	}
@@ -294,6 +294,16 @@ func GetInfos(title string) ([]string, string) {
 	}
 
 	return res, quality
+}
+
+func SimplifyMagnet(magnet string) string {
+	s := ""
+	r := regexp.MustCompile(`magnet:\?xt=urn:btih:\s*(.*?)\s*&dn`)
+	matches := r.FindAllStringSubmatch(magnet, -1)
+	for _, v := range matches {
+		s = v[1]
+	}
+	return "magnet:?xt=urn:btih:" + s
 }
 
 func Strip(s string) string {

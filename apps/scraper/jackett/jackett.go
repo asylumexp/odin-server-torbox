@@ -299,8 +299,7 @@ func getTorrents(indexer Indexer, payload common.Payload) []common.Torrent {
 		t.Name = item.Title
 		for _, attr := range item.Attrs {
 			if attr.Name == "magneturl" {
-				t.Magnet = attr.Value
-				t.Url = attr.Value
+				t.Magnet = common.SimplifyMagnet(attr.Value)
 			}
 			if attr.Name == "infohash" {
 				t.Hash = attr.Value

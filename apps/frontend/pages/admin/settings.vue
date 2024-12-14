@@ -25,6 +25,11 @@
 					<h2>RealDebrid</h2>
 					<RealDebrid @success="setRealDebrid" />
 				</div>
+
+				<div>
+					<h2>AllDebrid</h2>
+					<AllDebrid @success="setAllDebrid" />
+				</div>
 			</div>
 			<div class="divider"></div>
 			<button type="submit" class="btn btn-primary">Save</button>
@@ -41,6 +46,8 @@
 		e.preventDefault()
 		useSettings().save()
 	}
+
+	async function setAllDebrid(data: any) {}
 
 	async function setRealDebrid(data: any) {
 		useSettings().settings.real_debrid = data

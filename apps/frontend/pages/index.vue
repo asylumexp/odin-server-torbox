@@ -7,5 +7,8 @@
 	</div>
 </template>
 <script lang="ts" setup>
+	if (usePb().authStore.isAdmin) {
+		navigateTo('/admin')
+	}
 	const list = useProfile().me['trakt_sections']['home']
 </script>

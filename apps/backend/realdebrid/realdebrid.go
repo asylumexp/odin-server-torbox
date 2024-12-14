@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/odin-movieshow/backend/settings"
+	"github.com/odin-movieshow/backend/types"
 
 	"github.com/charmbracelet/log"
 	"github.com/go-resty/resty/v2"
@@ -161,7 +162,7 @@ func (rd *RealDebrid) CallEndpoint(
 	return data, respHeaders, status
 }
 
-func (rd *RealDebrid) Unrestrict(m string) map[string]any {
+func (rd *RealDebrid) Unrestrict(m string) []types.Unrestricted {
 	magnet, _, _ := rd.CallEndpoint("/torrents/addMagnet", "POST", map[string]string{
 		"host":   "real-debrid.com",
 		"magnet": m,
@@ -194,6 +195,8 @@ func (rd *RealDebrid) Unrestrict(m string) map[string]any {
 
 	links := info.(map[string]any)["links"].([]any)
 
+	us := []types.Unrestricted{}
+
 	for _, v := range links {
 		u, _, _ := rd.CallEndpoint("/unrestrict/link", "POST", map[string]string{
 			"link": v.(string),
@@ -214,11 +217,12 @@ func (rd *RealDebrid) Unrestrict(m string) map[string]any {
 
 		if !match && isVideo {
 			log.Debug("realdebrid unrestricted", "file", fname)
-			return u.(map[string]any)
+			un := types.Unrestricted{Filename: fname, Filesize: int(u.(map[string]any)["size"].(float64)), Download: u.(map[string]any)["download"].(string)}
+			us = append(us, un)
 		}
 	}
 
-	return nil
+	return us
 }
 
 func (rd *RealDebrid) Cleanup() {

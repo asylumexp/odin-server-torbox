@@ -2,6 +2,7 @@ package tmdb
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -37,8 +38,7 @@ func (t *Tmdb) PopulateTMDB(
 	defer wg.Done()
 	// defer mux.Unlock()
 	// mux.Lock()
-	tsets := t.settings.GetTmdb()
-	tmdbKey := tsets.Key
+	tmdbKey := os.Getenv("TMDB_KEY")
 	resource := "movie"
 	tmdbResource := "movie"
 	if objmap[k].(map[string]any)["show"] != nil {

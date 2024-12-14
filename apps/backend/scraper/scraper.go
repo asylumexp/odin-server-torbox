@@ -6,6 +6,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/odin-movieshow/backend/alldebrid"
 	"github.com/odin-movieshow/backend/helpers"
 	"github.com/odin-movieshow/backend/realdebrid"
 	"github.com/odin-movieshow/backend/settings"
@@ -22,6 +23,7 @@ type Scraper struct {
 	settings   *settings.Settings
 	helpers    *helpers.Helpers
 	realdebrid *realdebrid.RealDebrid
+	alldebrid  *alldebrid.AllDebrid
 }
 
 func New(
@@ -29,8 +31,9 @@ func New(
 	settings *settings.Settings,
 	helpers *helpers.Helpers,
 	realdebrid *realdebrid.RealDebrid,
+	alldebrid *alldebrid.AllDebrid,
 ) *Scraper {
-	return &Scraper{app: app, settings: settings, helpers: helpers, realdebrid: realdebrid}
+	return &Scraper{app: app, settings: settings, helpers: helpers, realdebrid: realdebrid, alldebrid: alldebrid}
 }
 
 func (s *Scraper) GetLinks(data map[string]any, mqt mqtt.Client) {
@@ -118,16 +121,15 @@ func (s *Scraper) unrestrict(
 		mqt.Publish(topic, 0, false, cstr)
 		return
 	}
-
-	u := s.realdebrid.Unrestrict(k.Magnet)
-	if u == nil || len(u) == 0 {
+	return
+	us := s.alldebrid.Unrestrict(k.Magnet)
+	// us := s.realdebrid.Unrestrict(k.Magnet)
+	if len(us) == 0 {
 		return
 	}
-	k.RealDebrid = append(k.RealDebrid, u)
-	log.Warn(k.ReleaseTitle)
-	if len(k.RealDebrid) > 0 {
-		s.helpers.WriteRDCache(topic, k.Magnet, k)
-		kstr, _ := json.Marshal(k)
-		mqt.Publish(topic, 0, false, kstr)
-	}
+	k.Links = us
+	log.Info(k.ReleaseTitle)
+	s.helpers.WriteRDCache(topic, k.Magnet, k)
+	kstr, _ := json.Marshal(k)
+	mqt.Publish(topic, 0, false, kstr)
 }

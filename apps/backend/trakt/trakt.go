@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -206,7 +207,7 @@ func (t *Trakt) RefreshTokens() {
 	for _, r := range records {
 		token := make(map[string]any)
 		if err := r.UnmarshalJSONField("trakt_token", &t); err == nil {
-			data, _, status := t.CallEndpoint("/oauth/token", "POST", map[string]any{"grant_type": "refresh_token", "client_id": t.settings.GetTrakt().ClientId, "client_secret": t.settings.GetTrakt().ClientSecret, "code": token["device_code"], "refresh_token": token["refresh_token"]}, false)
+			data, _, status := t.CallEndpoint("/oauth/token", "POST", map[string]any{"grant_type": "refresh_token", "client_id": os.Getenv("TRAKT_CLIENTID"), "client_secret": os.Getenv("TRAKT_SECRET"), "code": token["device_code"], "refresh_token": token["refresh_token"]}, false)
 			if status < 300 && data != nil {
 				data.(map[string]any)["device_code"] = token["device_code"]
 				r.Set("trakt_token", data)
@@ -222,7 +223,7 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 	var objmap any
 
 	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 3).R()
-	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", t.settings.GetTrakt().ClientId)
+	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", os.Getenv("TRAKT_CLIENTID"))
 	var respHeaders http.Header
 	status := 200
 	for k, v := range t.Headers {

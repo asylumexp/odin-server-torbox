@@ -27,10 +27,7 @@ type RealDebridSettings struct {
 }
 
 type AllDebridSettings struct {
-	AccessToken  string `json:"access_token"`
-	ClientId     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	RefreshToken string `json:"refresh_token"`
+	ApiKey string `json:"apikey"`
 }
 
 type Settings struct {

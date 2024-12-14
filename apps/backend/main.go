@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/joho/godotenv"
+	"github.com/odin-movieshow/backend/alldebrid"
 	"github.com/odin-movieshow/backend/common"
 	"github.com/odin-movieshow/backend/helpers"
 	"github.com/odin-movieshow/backend/imdb"
@@ -88,6 +89,7 @@ func main() {
 	// sentry.CaptureMessage("This is a test message")
 
 	l, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
+
 	if err == nil {
 		log.SetLevel(l)
 	} else {
@@ -99,7 +101,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	conf := pocketbase.Config{DefaultDev: true}
+	conf := pocketbase.Config{DefaultDev: false}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Automigrate: true,
@@ -112,7 +114,8 @@ func main() {
 		tmdb := tmdb.New(app, settings, helpers)
 		trakt := trakt.New(app, tmdb, settings, helpers)
 		realdebrid := realdebrid.New(app, settings)
-		scraper := scraper.New(app, settings, helpers, realdebrid)
+		alldebrid := alldebrid.New(app, settings)
+		scraper := scraper.New(app, settings, helpers, realdebrid, alldebrid)
 
 		email := "admin@odin.local"
 		if os.Getenv("ADMIN_EMAIL") != "" {
@@ -267,6 +270,24 @@ func main() {
 		e.Router.Any("/_realdebrid/*", func(c echo.Context) error {
 			url := strings.ReplaceAll(c.Request().URL.String(), "/_realdebrid", "")
 			result, headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil)
+
+			for k, v := range headers {
+				if funk.Contains([]string{
+					"Content-Encoding",
+					"Access-Control-Allow-Origin",
+				}, k) {
+					continue
+				}
+				c.Response().Header().Add(k, v[0])
+			}
+			c.Response().Status = status
+			return c.JSON(http.StatusOK, result)
+		}, apis.RequireAdminAuth())
+
+		e.Router.Any("/_alldebrid/*", func(c echo.Context) error {
+			url := strings.ReplaceAll(c.Request().URL.String(), "/_alldebrid", "")
+			var result interface{}
+			headers, status := alldebrid.CallEndpoint(url, c.Request().Method, nil, &result)
 
 			for k, v := range headers {
 				if funk.Contains([]string{

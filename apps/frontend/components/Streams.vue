@@ -19,43 +19,32 @@
 			<div></div>
 		) : (
 			<div>
-				{streams.value[props.q].map((stream) => (
-					<div>
-						<p>
-							<span class={'badge mr-2 ' + badgeClass(props.q)}>{stream.quality}</span>
-							<span>
-								{stream.info.join(' | ')} | {humanFileSize(stream.size)}
-							</span>
-							<br />
-							<span class="text-sm">{stream.name}</span>
-							<br />
-							<span class="btn btn-xs btn-secondary btn-outline mr-3" onClick={() => copyToClipbaord(stream.magnet)}>
-								<FontAwesomeIcon icon="clipboard" class="mr-1" />
-								Copy to clipboard
-							</span>
-						</p>
+				{streams.value[props.q].map((stream) =>
+					stream.links.map((l) => (
+						<div>
+							<p>
+								<span class={'badge mr-2 ' + badgeClass(props.q)}>{stream.quality}</span>
+								<span>
+									{stream.info.join(' | ')} | {humanFileSize(stream.size)}
+								</span>
+								<br />
+								<span class="text-sm">{l.filename}</span>
+								<br />
+								<span class="btn btn-xs btn-secondary btn-outline mr-3" onClick={() => copyToClipbaord(l.download)}>
+									<FontAwesomeIcon icon="clipboard" class="mr-1" />
+									Copy to clipboard
+								</span>
+							</p>
 
-						<div class="divider"></div>
-					</div>
-				))}
+							<div class="divider"></div>
+						</div>
+					))
+				)}
 			</div>
 		)
 
-	const unrestricted = ref<{ [m: string]: any }>({})
-	async function copyToClipbaord(magnet: string) {
-		let u = unrestricted.value[magnet]
-		console.log(u)
-		if (typeof u === 'undefined') {
-			u = await usePb().send('/unrestrict', {
-				method: 'POST',
-				body: {
-					magnet: magnet,
-				},
-			})
-		}
-
-		unrestricted.value[magnet] = u
-		navigator.clipboard.writeText(u['download'])
+	async function copyToClipbaord(url: string) {
+		navigator.clipboard.writeText(url)
 	}
 
 	function badgeClass(q: string) {
@@ -76,7 +65,7 @@
 	}
 	const streams_dialog = ref<HTMLDialogElement>()
 
-	const data = ref<{ quality: string }[]>([])
+	const data = ref<{ quality: string; links: { filename: string; download: string }[] }[]>([])
 
 	function humanFileSize(size: number): number | string {
 		var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024))
