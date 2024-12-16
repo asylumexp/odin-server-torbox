@@ -2,19 +2,18 @@ package scraper
 
 import (
 	"encoding/json"
-	"fmt"
-	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/odin-movieshow/backend/alldebrid"
+	"github.com/odin-movieshow/backend/common"
 	"github.com/odin-movieshow/backend/helpers"
+	"github.com/odin-movieshow/backend/indexer"
 	"github.com/odin-movieshow/backend/realdebrid"
 	"github.com/odin-movieshow/backend/settings"
 	"github.com/odin-movieshow/backend/types"
 	"github.com/thoas/go-funk"
 
 	"github.com/charmbracelet/log"
-	"github.com/go-resty/resty/v2"
 	"github.com/pocketbase/pocketbase"
 )
 
@@ -36,7 +35,7 @@ func New(
 	return &Scraper{app: app, settings: settings, helpers: helpers, realdebrid: realdebrid, alldebrid: alldebrid}
 }
 
-func (s *Scraper) GetLinks(data map[string]any, mqt mqtt.Client) {
+func (s *Scraper) GetLinks(data common.Payload, mqt mqtt.Client) {
 	// mux := sync.Mutex{}
 	j := s.settings.GetJackett()
 
@@ -45,91 +44,85 @@ func (s *Scraper) GetLinks(data map[string]any, mqt mqtt.Client) {
 		return
 	}
 
-	topic := "odin-movieshow/" + data["type"].(string)
-	indexertopic := "odin-movieshow/indexer/" + data["type"].(string)
-	if data["type"] == "episode" {
-		topic += "/" + data["episode_trakt"].(string)
-		indexertopic += "/" + data["episode_trakt"].(string)
+	topic := "odin-movieshow/" + data.Type
+	indexertopic := "odin-movieshow/indexer/" + data.Type
+	if data.Type == "episode" {
+		topic += "/" + data.EpisodeTrakt
+		indexertopic += "/" + data.EpisodeTrakt
 	} else {
-		topic += "/" + data["trakt"].(string)
-		indexertopic += "/" + data["trakt"].(string)
+		topic += "/" + data.Trakt
+		indexertopic += "/" + data.Trakt
 	}
 
 	log.Debug("MQTT", "indexer topic", indexertopic)
 	log.Debug("MQTT", "result topic", topic)
 	torrentQueue := make(chan types.Torrent)
 
-	allTorrentsUnrestricted := s.helpers.ReadRDCacheByResource(topic)
-	for _, u := range allTorrentsUnrestricted {
-		cstr, _ := json.Marshal(u)
-		mqt.Publish(topic, 0, false, cstr)
-	}
+	// allTorrentsUnrestricted := s.helpers.ReadRDCacheByResource(topic)
+	// for _, u := range allTorrentsUnrestricted {
+	// 	cstr, _ := json.Marshal(u)
+	// 	mqt.Publish(topic, 0, false, cstr)
+	// }
 
 	if token := mqt.Subscribe(indexertopic, 0, func(client mqtt.Client, msg mqtt.Message) {
+		if string(msg.Payload()) == "INDEXING_DONE" {
+			close(torrentQueue)
+		}
 		newTorrents := []types.Torrent{}
 		json.Unmarshal(msg.Payload(), &newTorrents)
 		go func() {
 			for _, t := range newTorrents {
-				if t.Magnet != "" {
-					torrentQueue <- t
-				}
+				torrentQueue <- t
 			}
 		}()
-		// fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 	}); token.Wait() &&
 		token.Error() != nil {
 		log.Error("mqtt-subscribe-indexer", "error", token.Error())
 	}
 
-	res := resty.New().SetTimeout(15*time.Minute).
-		R().
-		SetBody(data).
-		SetHeader("Content-Type", "application/json")
-
+	i := 0
+	d := 0
 	go func() {
 		done := []string{}
-		for {
-			select {
-			case k := <-torrentQueue:
-				if !funk.Contains(done, k.Magnet) && k.Quality != "720p" && k.Quality != "SD" &&
-					k.Quality != "CAM" {
-					s.unrestrict(k, mqt, topic)
-					done = append(done, k.Magnet)
+		for k := range torrentQueue {
+			i++
+			// Filter quality from settings
+			if !funk.Contains(done, k.Magnet) && k.Quality != "720p" && k.Quality != "SD" &&
+				k.Quality != "CAM" {
+				if s.unrestrict(k, mqt, topic) {
+					d++
 				}
+				done = append(done, k.Magnet)
 			}
 		}
 	}()
-
-	_, err := res.Post(fmt.Sprintf("%s/scrape", s.settings.GetScraperUrl()))
-	if err != nil {
-		log.Error("scrape", err)
-		return
-	}
+	indexer.Index(data)
 
 	<-torrentQueue
-	log.Warn("DONE")
+	mqt.Publish(topic, 0, false, "SCRAPING_DONE")
+	log.Warn("Scraping done", "unrestricted", d)
 }
 
 func (s *Scraper) unrestrict(
 	k types.Torrent,
 	mqt mqtt.Client,
 	topic string,
-) {
+) bool {
 	cache := s.helpers.ReadRDCache(topic, k.Magnet)
 	if cache != nil {
 		cstr, _ := json.Marshal(cache)
 		mqt.Publish(topic, 0, false, cstr)
-		return
+		return true
 	}
-	return
 	us := s.alldebrid.Unrestrict(k.Magnet)
 	// us := s.realdebrid.Unrestrict(k.Magnet)
 	if len(us) == 0 {
-		return
+		return false
 	}
 	k.Links = us
-	log.Info(k.ReleaseTitle)
+	log.Debug("Unrestricted: " + k.ReleaseTitle)
 	s.helpers.WriteRDCache(topic, k.Magnet, k)
 	kstr, _ := json.Marshal(k)
 	mqt.Publish(topic, 0, false, kstr)
+	return true
 }

@@ -152,7 +152,9 @@ func main() {
 		e.Router.POST("/scrape", func(c echo.Context) error {
 			mq := common.MqttClient()
 			log.Debug("Scraping")
-			scraper.GetLinks(apis.RequestInfo(c).Data, mq)
+			var pl common.Payload
+			c.Bind(&pl)
+			scraper.GetLinks(pl, mq)
 			return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 		}, RequireDeviceOrRecordAuth(app))
 
