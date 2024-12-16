@@ -1,3 +1,5 @@
+// WIP - probably won't use
+
 package prowlarr
 
 import (
@@ -12,7 +14,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/go-resty/resty/v2"
-	"github.com/gofiber/fiber/v2"
 	"github.com/thoas/go-funk"
 )
 
@@ -51,13 +52,7 @@ func (indexer *Indexer) HasTvParam(param string) bool {
 	return indexer.TvSearchAvailable() && funk.Contains(indexer.Caps.TvSearchParams, param)
 }
 
-func Search(c *fiber.Ctx) error {
-	payload := common.Payload{}
-
-	if err := c.BodyParser(&payload); err != nil {
-		return err
-	}
-
+func Search(payload common.Payload) {
 	payload.Title = url.QueryEscape(payload.Title)
 	payload.EpisodeTitle = url.QueryEscape(payload.EpisodeTitle)
 	payload.ShowTitle = url.QueryEscape(payload.ShowTitle)
@@ -91,10 +86,6 @@ func Search(c *fiber.Ctx) error {
 	}
 
 	wg.Wait()
-	dedupe := common.Dedupe(allTorrents)
-	filtered := common.SeparateByQuality(dedupe, payload)
-	log.Info("torrents", "total", len(allTorrents), "dedupe", len(filtered))
-	return c.JSON(filtered)
 }
 
 func getIndexerList(payload common.Payload) []Indexer {

@@ -34,7 +34,7 @@ type Trakt struct {
 	tmdb         *tmdb.Tmdb
 	settings     *settings.Settings
 	helpers      *helpers.Helpers
-	Headers      map[string]any
+	Headers      map[string]string
 	FetchTMDB    bool
 	FetchSeasons bool
 }
@@ -45,7 +45,7 @@ func New(app *pocketbase.PocketBase, tmdb *tmdb.Tmdb, settings *settings.Setting
 		tmdb:         tmdb,
 		settings:     settings,
 		helpers:      helpers,
-		Headers:      map[string]any{},
+		Headers:      map[string]string{},
 		FetchTMDB:    true,
 		FetchSeasons: true,
 	}
@@ -97,7 +97,7 @@ func (t *Trakt) removeDuplicates(objmap []any) []any {
 func (t *Trakt) removeWatched(objmap []any) []any {
 	toRemove := make([]int, 0)
 	for i, o := range objmap {
-		if o.(map[string]any)["episode"].(map[string]any)["watched"] != nil && o.(map[string]any)["episode"].(map[string]any)["watched"].(bool) == true {
+		if o.(map[string]any)["episode"].(map[string]any)["watched"] != nil && o.(map[string]any)["episode"].(map[string]any)["watched"].(bool) {
 			toRemove = append(toRemove, i)
 		}
 	}
@@ -179,14 +179,14 @@ func (t *Trakt) syncByType(wg *sync.WaitGroup, typ string, last_history types.Da
 				record := models.NewRecord(collection)
 				record.Set("watched_at", o.(map[string]any)["watched_at"])
 				record.Set("user", user)
-				if typ == "movies" {
+				switch typ {
+				case "movies":
 					record.Set("type", "movie")
 
 					record.Set("trakt_id", o.(map[string]any)["movie"].(map[string]any)["ids"].(map[string]any)["trakt"])
 					record.Set("data", map[string]any{"genres": o.(map[string]any)["movie"].(map[string]any)["genres"]})
 					record.Set("runtime", o.(map[string]any)["movie"].(map[string]any)["runtime"])
-
-				} else if typ == "episodes" {
+				case "episodes":
 					record.Set("type", "episode")
 					record.Set("trakt_id", o.(map[string]any)["episode"].(map[string]any)["ids"].(map[string]any)["trakt"])
 					record.Set("show_id", o.(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"])
@@ -223,16 +223,20 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 	var objmap any
 
 	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 3).R()
-	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", os.Getenv("TRAKT_CLIENTID"))
+	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", os.Getenv("TRAKT_CLIENTID")).AddRetryCondition(func(r *resty.Response, err error) bool {
+		return r.StatusCode() == 401
+	}).SetHeaders(t.Headers)
+
 	var respHeaders http.Header
 	status := 200
-	for k, v := range t.Headers {
-
-		if funk.Contains([]string{"Host", "Connection"}, k) {
-			continue
-		}
-		request.SetHeader(k, v.(string))
-	}
+	// for k, v := range t.Headers {
+	//
+	// 	if funk.Contains([]string{"Host", "Connection"}, k) {
+	// 		continue
+	// 	}
+	// 	request.SetHeader(k, v
+	// }
+	// request.SetHeaders(t.Headers)
 	if body != nil {
 		request.SetBody(body)
 	}
@@ -364,40 +368,39 @@ func (t *Trakt) getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any) {
 }
 
 type Watched struct {
-	Plays         int       `json:"plays"`
 	LastWatchedAt time.Time `json:"last_watched_at"`
 	LastUpdatedAt time.Time `json:"last_updated_at"`
-	Movie         struct {
-		Title string `json:"title"`
-		Year  int    `json:"year"`
-		Ids   struct {
-			Trakt float64 `json:"trakt"`
-			Slug  string  `json:"slug"`
-			Imdb  string  `json:"imdb"`
-			Tmdb  int     `json:"tmdb"`
-		} `json:"ids"`
-	} `json:"movie"`
-
-	Show struct {
-		Title string `json:"title"`
-		Year  int    `json:"year"`
-		Ids   struct {
-			Trakt  float64 `json:"trakt"`
-			Slug   string  `json:"slug"`
-			Tvdb   int     `json:"tvdb"`
-			Imdb   string  `json:"imdb"`
-			Tmdb   int     `json:"tmdb"`
-			Tvrage any     `json:"tvrage"`
-		} `json:"ids"`
-	} `json:"show"`
-	Seasons []struct {
-		Number   int `json:"number"`
+	Seasons       []struct {
 		Episodes []struct {
+			LastWatchedAt time.Time `json:"last_watched_at"`
 			Number        int       `json:"number"`
 			Plays         int       `json:"plays"`
-			LastWatchedAt time.Time `json:"last_watched_at"`
 		} `json:"episodes"`
+		Number int `json:"number"`
 	} `json:"seasons"`
+	Movie struct {
+		Title string `json:"title"`
+		Ids   struct {
+			Slug  string  `json:"slug"`
+			Imdb  string  `json:"imdb"`
+			Trakt float64 `json:"trakt"`
+			Tmdb  int     `json:"tmdb"`
+		} `json:"ids"`
+		Year int `json:"year"`
+	} `json:"movie"`
+	Show struct {
+		Title string `json:"title"`
+		Ids   struct {
+			Tvrage any     `json:"tvrage"`
+			Slug   string  `json:"slug"`
+			Imdb   string  `json:"imdb"`
+			Trakt  float64 `json:"trakt"`
+			Tvdb   int     `json:"tvdb"`
+			Tmdb   int     `json:"tmdb"`
+		} `json:"ids"`
+		Year int `json:"year"`
+	} `json:"show"`
+	Plays int `json:"plays"`
 }
 
 func (t *Trakt) GetWatched(objmap []any) []any {

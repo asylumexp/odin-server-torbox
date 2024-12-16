@@ -2,7 +2,4 @@ go 1.23.2
 
 toolchain go1.23.2
 
-use (
-	./apps/backend
-	./apps/scraper
-)
+use ./apps/backend

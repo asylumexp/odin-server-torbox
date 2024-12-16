@@ -11,11 +11,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/joho/godotenv"
-	"github.com/odin-movieshow/backend/alldebrid"
 	"github.com/odin-movieshow/backend/common"
+	"github.com/odin-movieshow/backend/downloader/alldebrid"
+	"github.com/odin-movieshow/backend/downloader/realdebrid"
 	"github.com/odin-movieshow/backend/helpers"
 	"github.com/odin-movieshow/backend/imdb"
-	"github.com/odin-movieshow/backend/realdebrid"
 	"github.com/odin-movieshow/backend/scraper"
 	"github.com/odin-movieshow/backend/settings"
 	"github.com/odin-movieshow/backend/tmdb"
@@ -40,7 +40,9 @@ func RequireDeviceOrRecordAuth(app *pocketbase.PocketBase) echo.MiddlewareFunc {
 	mut := sync.RWMutex{}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			mut.Lock()
 			record, _ := c.Get("authRecord").(*models.Record)
+			mut.Unlock()
 			if record == nil {
 				d, _ := getDevice(app, c)
 				if d != nil {
@@ -68,26 +70,6 @@ func main() {
 	godotenv.Load()
 
 	log.SetReportCaller(true)
-	// err := sentry.Init(sentry.ClientOptions{
-	// 	Dsn: "https://308c965810583274884cbc87d1a584de@sentry.dnmc.in/4",
-	// 	// Set TracesSampleRate to 1.0 to capture 100%
-	// 	// of transactions for performance monitoring.
-	// 	// We recommend adjusting this value in production,
-	// 	TracesSampleRate: 1.0,
-	// })
-	// if err != nil {
-	// 	log.Error("sentry.Init: %s", err)
-	// }
-
-	// // Flush buffered events before the program terminates.
-	// defer sentry.Flush(2 * time.Second)
-	// sentry.CaptureException(fmt.Errorf("This is a test exception"))
-	// sentry.CaptureEvent(&sentry.Event{
-	// 	Message: "This is a test error event",
-	// 	Level:   sentry.LevelError,
-	// })
-	// sentry.CaptureMessage("This is a test message")
-
 	l, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
 
 	if err == nil {
@@ -111,7 +93,7 @@ func main() {
 	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		settings := settings.New(app)
 		helpers := helpers.New(app)
-		tmdb := tmdb.New(app, settings, helpers)
+		tmdb := tmdb.New(settings, helpers)
 		trakt := trakt.New(app, tmdb, settings, helpers)
 		realdebrid := realdebrid.New(app, settings)
 		alldebrid := alldebrid.New(app, settings)
@@ -222,13 +204,22 @@ func main() {
 
 			id := info.AuthRecord.Id
 			url := strings.ReplaceAll(c.Request().URL.String(), "/_trakt", "")
-			trakt.Headers = apis.RequestInfo(c).Headers
+
+			rheaders := map[string]string{}
+
+			for k, v := range apis.RequestInfo(c).Headers {
+				if k == "Host" || k == "Connection" || k == "authorization" {
+					continue
+				}
+				rheaders[k] = v.(string)
+			}
+			trakt.Headers = rheaders
 			// delete passed header of pocketbase
 
 			t := make(map[string]any)
 			u, _ := app.Dao().FindRecordById("users", id)
 			u.UnmarshalJSONField("trakt_token", &t)
-			delete(trakt.Headers, "authorization")
+			// delete(trakt.Headers, "authorization")
 
 			if t != nil && t["access_token"] != nil {
 				trakt.Headers["authorization"] = "Bearer " + t["access_token"].(string)

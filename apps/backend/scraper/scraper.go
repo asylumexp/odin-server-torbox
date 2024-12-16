@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/odin-movieshow/backend/alldebrid"
 	"github.com/odin-movieshow/backend/common"
+	"github.com/odin-movieshow/backend/downloader/alldebrid"
+	"github.com/odin-movieshow/backend/downloader/realdebrid"
 	"github.com/odin-movieshow/backend/helpers"
 	"github.com/odin-movieshow/backend/indexer"
-	"github.com/odin-movieshow/backend/realdebrid"
 	"github.com/odin-movieshow/backend/settings"
 	"github.com/odin-movieshow/backend/types"
 	"github.com/thoas/go-funk"

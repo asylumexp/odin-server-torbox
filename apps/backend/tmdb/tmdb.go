@@ -10,19 +10,17 @@ import (
 	"github.com/odin-movieshow/backend/settings"
 
 	"github.com/charmbracelet/log"
-	"github.com/pocketbase/pocketbase"
 
 	resty "github.com/go-resty/resty/v2"
 )
 
 type Tmdb struct {
-	app      *pocketbase.PocketBase
 	settings *settings.Settings
 	helpers  *helpers.Helpers
 }
 
-func New(app *pocketbase.PocketBase, settings *settings.Settings, helpers *helpers.Helpers) *Tmdb {
-	return &Tmdb{app: app, settings: settings, helpers: helpers}
+func New(settings *settings.Settings, helpers *helpers.Helpers) *Tmdb {
+	return &Tmdb{settings: settings, helpers: helpers}
 }
 
 const (
