@@ -83,7 +83,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	conf := pocketbase.Config{DefaultDev: false}
+	conf := pocketbase.Config{DefaultDev: true}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Automigrate: true,
@@ -128,6 +128,7 @@ func main() {
 		scheduler.Start()
 
 		go func() {
+			// trakt.SyncHistory()
 		}()
 
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))

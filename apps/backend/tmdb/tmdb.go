@@ -1,6 +1,7 @@
 package tmdb
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/odin-movieshow/backend/helpers"
 	"github.com/odin-movieshow/backend/settings"
+	"github.com/odin-movieshow/backend/types"
+	"github.com/thoas/go-funk"
 
 	"github.com/charmbracelet/log"
 
@@ -26,6 +29,129 @@ func New(settings *settings.Settings, helpers *helpers.Helpers) *Tmdb {
 const (
 	TMDB_URL = "https://api.themoviedb.org/3"
 )
+
+func (t *Tmdb) PopulateTMDB2(
+	k int,
+	mux *sync.Mutex,
+	objmap []types.TraktItem,
+) {
+	tmdbKey := os.Getenv("TMDB_KEY")
+	resource := "movie"
+	tmdbResource := "movie"
+	if objmap[k].Type == "show" || objmap[k].Type == "episode" && objmap[k].Show != nil {
+		resource = "show"
+		tmdbResource = "tv"
+	}
+	if objmap[k].Season > 0 {
+		resource = "season"
+		tmdbResource = "tv"
+	}
+	id := objmap[k].IDs.Tmdb
+
+	if objmap[k].Show != nil {
+		id = objmap[k].Show.IDs.Tmdb
+	}
+	if objmap[k].IDs.Tmdb == 0 {
+		return
+	}
+	cache := t.helpers.ReadTmdbCache(id, resource)
+	if cache != nil {
+		objmap[k].Tmdb = cache
+		return
+	}
+	request := resty.New().
+		SetRetryCount(3).
+		SetTimeout(time.Second * 30).
+		SetRetryWaitTime(time.Second).
+		R()
+
+	url := fmt.Sprintf("%s/%s/%d?api_key=%s&append_to_response=credits,videos,images", TMDB_URL, tmdbResource, id, tmdbKey)
+	// log.Debug(url)
+	var tmdbObj interface{}
+	if _, err := request.SetResult(&tmdbObj).SetHeader("content-type", "application/json").Get(url); err == nil {
+
+		if tmdbObj == nil {
+			return
+		}
+		tmdb := objToTmdb(tmdbObj)
+
+		if (tmdb).Credits != nil {
+			if (tmdb).Credits.Crew != nil {
+				(tmdb).Credits.Crew = nil
+			}
+			if (tmdb).Credits.Cast != nil {
+				// strip down cast
+				cast := (*(tmdb).Credits.Cast)
+				castlen := len((cast))
+				if castlen > 15 {
+					castlen = 15
+				}
+				castcut := cast[0:castlen]
+				tmdb.Credits.Cast = &castcut
+			}
+		}
+		//
+		if tmdb.Images != nil &&
+			tmdb.Images.Logos != nil {
+
+			for _, l := range *tmdb.Images.Logos {
+				if l.Iso_639_1 != nil && *(l.Iso_639_1) == "en" {
+					tmdb.LogoPath = l.FilePath
+					break
+				}
+			}
+			if tmdb.LogoPath != "" && len(*tmdb.Images.Logos) > 0 {
+				tmdb.LogoPath = (*tmdb.Images.Logos)[0].FilePath
+			}
+			tmdb.Images = nil
+		} else {
+			tmdb.LogoPath = ""
+		}
+		tmdbObj := tmdbToObj(tmdb)
+		t.helpers.WriteTmdbCache(id, resource, &tmdbObj)
+		objmap[k].Tmdb = tmdbObj
+	} else {
+		log.Error("TMDB", "Response", err)
+	}
+}
+
+func objToTmdb(obj any) *types.TmdbItem {
+	tmdb := types.TmdbItem{}
+	ms, err := json.Marshal(obj)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	err = json.Unmarshal(ms, &tmdb)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	tmdb.Original = &obj
+	return &tmdb
+}
+
+func tmdbToObj(tmdb *types.TmdbItem) any {
+	var obj any
+	ms, err := json.Marshal(tmdb)
+	if err == nil {
+		err = json.Unmarshal(ms, &obj)
+		if err == nil {
+			orig := *(tmdb.Original)
+			if (orig) == nil {
+				return obj
+			}
+			for k, v := range (orig).(map[string]interface{}) {
+				if funk.Contains([]string{"images", "credits"}, k) {
+					continue
+				}
+				obj.(map[string]any)[k] = v
+			}
+			obj.(map[string]any)["original"] = nil
+		}
+	}
+	return obj
+}
 
 func (t *Tmdb) PopulateTMDB(
 	k int,
@@ -78,9 +204,6 @@ func (t *Tmdb) PopulateTMDB(
 			tmdb.(map[string]any)["credits"].(map[string]any)["cast"].([]any) != nil {
 			// strip down cast
 			cast := tmdb.(map[string]any)["credits"].(map[string]any)["cast"].([]any)
-			// sort.Slice(cast[:], func(i, j int) bool {
-			// 	return cast[i].(map[string]any)["popularity"].(float64) > cast[j].(map[string]any)["popularity"].(float64)
-			// })
 			castlen := len(cast)
 			if castlen > 15 {
 				castlen = 15
