@@ -196,7 +196,7 @@ func (t *Trakt) RefreshTokens() {
 	}
 }
 
-func (t *Trakt) normalize2(objmap []types.TraktItem) []types.TraktItem {
+func (t *Trakt) normalize(objmap []types.TraktItem) []types.TraktItem {
 	for i, o := range objmap {
 		if o.Movie != nil || o.Episode != nil || o.Show != nil {
 			m := types.TraktItem{}
@@ -241,7 +241,7 @@ func (t *Trakt) objToItems(objmap []any) []types.TraktItem {
 				}
 				items[i].Original = &orig
 			}
-			return t.normalize2(items)
+			return t.normalize(items)
 		}
 	}
 	return []types.TraktItem{}
@@ -374,7 +374,7 @@ func (t *Trakt) getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []types.Trak
 	for k := range objmap {
 		wg.Add(1)
 		go func() {
-			t.tmdb.PopulateTMDB2(k, mux, objmap)
+			t.tmdb.PopulateTMDB(k, mux, objmap)
 			wg.Done()
 		}()
 	}
