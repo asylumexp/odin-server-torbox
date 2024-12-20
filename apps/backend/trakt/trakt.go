@@ -57,24 +57,7 @@ func remove[T any](slice []T, s int) []T {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-// sometimes there is a movie/show field, sometimes there's not... so let's normalize it
-
-func (t *Trakt) normalize(objmap []any, endpoint string) {
-	obj := "movie"
-	if strings.Contains(endpoint, "/show") {
-		obj = "show"
-	}
-
-	for i, o := range objmap {
-		if objmap[i].(map[string]any)["movie"] == nil && objmap[i].(map[string]any)["show"] == nil {
-			m := make(map[string]any)
-			m[obj] = o
-			objmap[i] = m
-		}
-	}
-}
-
-func (t *Trakt) removeDuplicates2(objmap []types.TraktItem) []types.TraktItem {
+func (t *Trakt) removeDuplicates(objmap []types.TraktItem) []types.TraktItem {
 	showsSeen := []uint{}
 	toRemove := []int{}
 	for i, o := range objmap {
@@ -103,69 +86,16 @@ func (t *Trakt) removeDuplicates2(objmap []types.TraktItem) []types.TraktItem {
 	return newmap
 }
 
-func (t *Trakt) removeDuplicates(objmap []any) []any {
-	showsSeen := make([]float64, 0)
-	toRemove := make([]int, 0)
-	for i, o := range objmap {
-		id := o.(map[string]any)["show"].(map[string]any)["ids"].(map[string]any)["trakt"].(float64)
-		if !funk.ContainsFloat64(showsSeen, id) {
-			showsSeen = append(showsSeen, id)
-		} else {
-			toRemove = append(toRemove, i)
-		}
-	}
-
-	newmap := make([]any, 0)
-
-	for i, o := range objmap {
-		if !funk.ContainsInt(toRemove, i) {
-			newmap = append(newmap, o)
-		}
-	}
-
-	return newmap
-}
-
-func (t *Trakt) removeWatched2(objmap []types.TraktItem) []types.TraktItem {
+func (t *Trakt) removeWatched(objmap []types.TraktItem) []types.TraktItem {
 	return funk.Filter(objmap, func(o types.TraktItem) bool {
 		return !o.Watched
 	}).([]types.TraktItem)
 }
 
-func (t *Trakt) removeWatched(objmap []any) []any {
-	toRemove := make([]int, 0)
-	for i, o := range objmap {
-		if o.(map[string]any)["episode"].(map[string]any)["watched"] != nil && o.(map[string]any)["episode"].(map[string]any)["watched"].(bool) {
-			toRemove = append(toRemove, i)
-		}
-	}
-
-	newmap := make([]any, 0)
-
-	for i, o := range objmap {
-		if !funk.ContainsInt(toRemove, i) {
-			newmap = append(newmap, o)
-		}
-	}
-
-	return newmap
-}
-
-func (t *Trakt) removeSeason02(objmap []types.TraktItem) []types.TraktItem {
+func (t *Trakt) removeSeason0(objmap []types.TraktItem) []types.TraktItem {
 	toKeep := []types.TraktItem{}
 	for _, o := range objmap {
 		if o.Number > 0 && o.Season > 0 {
-			toKeep = append(toKeep, o)
-		}
-	}
-
-	return toKeep
-}
-
-func (t *Trakt) removeSeason0(objmap []any) []any {
-	toKeep := []any{}
-	for _, o := range objmap {
-		if o.(map[string]any)["episode"] != nil && o.(map[string]any)["episode"].(map[string]any)["season"] != nil && o.(map[string]any)["episode"].(map[string]any)["season"].(float64) > 0 {
 			toKeep = append(toKeep, o)
 		}
 	}
@@ -407,22 +337,21 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 				return items, respHeaders, status
 			}
 
-			t.GetWatched2(items)
+			t.GetWatched(items)
 
 			if strings.Contains(endpoint, "calendars") {
-				items = t.removeSeason02(items)
-				items = t.removeWatched2(items)
-				items = t.removeDuplicates2(items)
+				items = t.removeSeason0(items)
+				items = t.removeWatched(items)
+				items = t.removeDuplicates(items)
 			}
 
 			var wg sync.WaitGroup
 			var mux sync.Mutex
 			if t.FetchTMDB {
-				t.getTMDB2(&wg, &mux, items)
+				t.getTMDB(&wg, &mux, items)
 			}
 
 			wg.Wait()
-			// objmap = t.FixEpisodes2(items)
 
 			return t.itemsToObj(items), respHeaders, status
 
@@ -430,32 +359,6 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 				return objmap, respHeaders, status
 			}
 
-			if donorm {
-				t.normalize(objmap.([]any), endpoint)
-			}
-
-			if (objmap.([]any)[0].(map[string]any)["movie"] != nil || objmap.([]any)[0].(map[string]any)["show"] != nil) && !strings.Contains(endpoint, "sync/history") {
-
-				objmap = t.GetWatched(objmap.([]any))
-
-				if strings.Contains(endpoint, "calendars") {
-					objmap = t.removeSeason0(objmap.([]any))
-					objmap = t.removeWatched(objmap.([]any))
-					objmap = t.removeDuplicates(objmap.([]any))
-				}
-
-				var wg sync.WaitGroup
-				var mux sync.Mutex
-				if t.FetchTMDB {
-					t.getTMDB(&wg, &mux, objmap.([]any))
-				}
-
-				wg.Wait()
-				if !strings.Contains(endpoint, "sync/history") {
-					objmap = t.FixEpisodes(objmap)
-				}
-
-			}
 		default:
 
 		}
@@ -467,77 +370,7 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 	return objmap, respHeaders, status
 }
 
-// fixes calendar episodes
-func (t *Trakt) FixEpisodes2(items []types.TraktItem) []types.TraktItem {
-	return items
-	//  for i,o := range items{
-	//    if o.Type == "episode" {
-	//
-	//    }
-	//
-	//
-	//  }
-	//
-	// if funk.IsCollection(result) {
-	// 	result = funk.Map(result, func(m any) any {
-	// 		item := ""
-	// 		for _, k := range []string{"episode", "movie", "show"} {
-	// 			if m.(map[string]any)[k] != nil {
-	// 				item = k
-	// 				break
-	// 			}
-	// 		}
-	// 		if item == "" {
-	// 			return m
-	// 		}
-	// 		newM := m.(map[string]any)[item].(map[string]any)
-	// 		newM["type"] = item
-	// 		if item == "episode" {
-	// 			if m.(map[string]any)["show"] != nil && newM["show"] == nil {
-	// 				newM["show"] = m.(map[string]any)["show"]
-	// 			}
-	// 			if newM["show"] != nil {
-	// 				newM["tmdb"] = newM["show"].(map[string]any)["tmdb"]
-	// 			}
-	// 		}
-	// 		return newM
-	// 	})
-	// }
-	//
-	// return result
-}
-
-func (t *Trakt) FixEpisodes(result any) []any {
-	if funk.IsCollection(result) {
-		result = funk.Map(result, func(m any) any {
-			item := ""
-			for _, k := range []string{"episode", "movie", "show"} {
-				if m.(map[string]any)[k] != nil {
-					item = k
-					break
-				}
-			}
-			if item == "" {
-				return m
-			}
-			newM := m.(map[string]any)[item].(map[string]any)
-			newM["type"] = item
-			if item == "episode" {
-				if m.(map[string]any)["show"] != nil && newM["show"] == nil {
-					newM["show"] = m.(map[string]any)["show"]
-				}
-				if newM["show"] != nil {
-					newM["tmdb"] = newM["show"].(map[string]any)["tmdb"]
-				}
-			}
-			return newM
-		})
-	}
-
-	return result.([]any)
-}
-
-func (t *Trakt) getTMDB2(wg *sync.WaitGroup, mux *sync.Mutex, objmap []types.TraktItem) {
+func (t *Trakt) getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []types.TraktItem) {
 	for k := range objmap {
 		wg.Add(1)
 		go func() {
@@ -546,13 +379,6 @@ func (t *Trakt) getTMDB2(wg *sync.WaitGroup, mux *sync.Mutex, objmap []types.Tra
 		}()
 	}
 	wg.Wait()
-}
-
-func (t *Trakt) getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []any) {
-	for k := range objmap {
-		wg.Add(1)
-		go t.tmdb.PopulateTMDB(k, wg, mux, objmap)
-	}
 }
 
 type Watched struct {
@@ -571,18 +397,7 @@ type Watched struct {
 	Plays int             `json:"plays"`
 }
 
-func (t *Trakt) GetWatched(objmap []any) []any {
-	if len(objmap) == 0 {
-		return objmap
-	}
-	if objmap[0].(map[string]any)["show"] != nil {
-		return t.GetWatchedCalendarEpisodes(objmap)
-	}
-
-	return t.GetWatchedMovies(objmap)
-}
-
-func (t *Trakt) GetWatched2(objmap []types.TraktItem) []types.TraktItem {
+func (t *Trakt) GetWatched(objmap []types.TraktItem) []types.TraktItem {
 	if len(objmap) == 0 {
 		return objmap
 	}
@@ -601,33 +416,6 @@ func (t *Trakt) getHistory(htype string) []any {
 	return data
 }
 
-func (t *Trakt) GetWatchedCalendarEpisodes(objmap []any) []any {
-	history := t.getHistory("episode")
-	for i := range objmap {
-		tvshow := objmap[i].(map[string]any)["show"].(map[string]any)
-		episode := objmap[i].(map[string]any)["episode"]
-		if tvshow != nil && episode != nil {
-			episode.(map[string]any)["watched"] = false
-			tvshow["watched"] = false
-			for _, h := range history {
-				if h.(map[string]any)["trakt_id"] == episode.(map[string]any)["ids"].(map[string]any)["trakt"] {
-					episode.(map[string]any)["watched"] = true
-					tvshow["watched"] = true
-					break
-				}
-			}
-
-		}
-	}
-	newmap := make([]any, 0)
-
-	for _, o := range objmap {
-		newmap = append(newmap, o)
-	}
-
-	return newmap
-}
-
 func (t *Trakt) AssignWatched(objmap []types.TraktItem, typ string) []types.TraktItem {
 	history := t.getHistory(typ)
 	for i, o := range objmap {
@@ -643,27 +431,6 @@ func (t *Trakt) AssignWatched(objmap []types.TraktItem, typ string) []types.Trak
 
 	}
 	newmap := make([]types.TraktItem, 0)
-
-	for _, o := range objmap {
-		newmap = append(newmap, o)
-	}
-
-	return newmap
-}
-
-func (t *Trakt) GetWatchedMovies(objmap []any) []any {
-	history := t.getHistory("movie")
-	for i, o := range objmap {
-		objmap[i].(map[string]any)["movie"].(map[string]any)["watched"] = false
-		for _, h := range history {
-			if h.(map[string]any)["trakt_id"] == o.(map[string]any)["movie"].(map[string]any)["ids"].(map[string]any)["trakt"] {
-				objmap[i].(map[string]any)["movie"].(map[string]any)["watched"] = true
-				break
-			}
-		}
-
-	}
-	newmap := make([]any, 0)
 
 	for _, o := range objmap {
 		newmap = append(newmap, o)
