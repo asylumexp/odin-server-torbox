@@ -216,7 +216,8 @@ func (t *Trakt) normalize(objmap []types.TraktItem) []types.TraktItem {
 					m.Type = "show"
 				}
 			}
-			m.Original = o.Original
+			orig := (*o.Original).(map[string]any)[m.Type]
+			m.Original = &orig
 			m.WatchedAt = o.WatchedAt
 			objmap[i] = m
 		}
@@ -261,12 +262,19 @@ func (t *Trakt) itemsToObj(items []types.TraktItem) []map[string]any {
 
 	for i := range o {
 		orig := items[i].Original
-		log.Debug(items[i].Type, "orig", items[i].Original)
-		items[i].Original = nil
 		for k, v := range (*orig).(map[string]any) {
-			o[i][k] = v
+			if o[i][k] == nil && v != nil {
+				o[i][k] = v
+			}
 		}
 		o[i]["original"] = nil
+		o[i]["movie"] = nil
+		if o[i]["episode"] == nil {
+			// o[i]["show"] = nil
+		} else {
+			o[i]["episode"] = nil
+		}
+
 	}
 
 	return o
@@ -355,10 +363,6 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 
 			return t.itemsToObj(items), respHeaders, status
 
-			if len(objmap.([]any)) == 0 {
-				return objmap, respHeaders, status
-			}
-
 		default:
 
 		}
@@ -374,7 +378,7 @@ func (t *Trakt) getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []types.Trak
 	for k := range objmap {
 		wg.Add(1)
 		go func() {
-			t.tmdb.PopulateTMDB(k, mux, objmap)
+			t.tmdb.PopulateTMDB(k, objmap)
 			wg.Done()
 		}()
 	}

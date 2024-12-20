@@ -32,10 +32,8 @@ const (
 
 func (t *Tmdb) PopulateTMDB(
 	k int,
-	mux *sync.Mutex,
 	objmap []types.TraktItem,
 ) {
-	tmdbKey := os.Getenv("TMDB_KEY")
 	resource := "movie"
 	tmdbResource := "movie"
 	if objmap[k].Type == "show" || objmap[k].Type == "episode" && objmap[k].Show != nil {
@@ -54,68 +52,30 @@ func (t *Tmdb) PopulateTMDB(
 	if objmap[k].IDs.Tmdb == 0 {
 		return
 	}
+	var tmdbObj any
+	url := fmt.Sprintf("/%s/%d", tmdbResource, id)
 	cache := t.helpers.ReadTmdbCache(id, resource)
 	if cache != nil {
-		objmap[k].Tmdb = cache
+		tmdbObj = cache
+	} else {
+		tmdbObj = t.CallEndpoint(url)
+	}
+
+	if tmdbObj == nil {
 		return
 	}
-	request := resty.New().
-		SetRetryCount(3).
-		SetTimeout(time.Second * 30).
-		SetRetryWaitTime(time.Second).
-		R()
-
-	url := fmt.Sprintf("%s/%s/%d?api_key=%s&append_to_response=credits,videos,images", TMDB_URL, tmdbResource, id, tmdbKey)
-	// log.Debug(url)
-	var tmdbObj interface{}
-	if _, err := request.SetResult(&tmdbObj).SetHeader("content-type", "application/json").Get(url); err == nil {
-
-		if tmdbObj == nil {
-			return
-		}
-		tmdb := objToTmdb(tmdbObj)
-
-		if (tmdb).Credits != nil {
-			if (tmdb).Credits.Crew != nil {
-				(tmdb).Credits.Crew = nil
-			}
-			if (tmdb).Credits.Cast != nil {
-				// strip down cast
-				cast := (*(tmdb).Credits.Cast)
-				castlen := len((cast))
-				if castlen > 15 {
-					castlen = 15
-				}
-				castcut := cast[0:castlen]
-				tmdb.Credits.Cast = &castcut
-			}
-		}
-		//
-		if tmdb.Images != nil &&
-			tmdb.Images.Logos != nil {
-
-			for _, l := range *tmdb.Images.Logos {
-				if l.Iso_639_1 != nil && *(l.Iso_639_1) == "en" {
-					tmdb.LogoPath = l.FilePath
-					break
-				}
-			}
-			if tmdb.LogoPath != "" && len(*tmdb.Images.Logos) > 0 {
-				tmdb.LogoPath = (*tmdb.Images.Logos)[0].FilePath
-			}
-			tmdb.Images = nil
-		} else {
-			tmdb.LogoPath = ""
-		}
-		tmdbObj := tmdbToObj(tmdb)
+	tmdb := t.prepare(tmdbObj)
+	tmdbObj = t.tmdbToObj(tmdb)
+	objmap[k].Tmdb = tmdbObj
+	if objmap[k].Show != nil {
+		objmap[k].Show.Tmdb = tmdbObj
+	}
+	if cache == nil {
 		t.helpers.WriteTmdbCache(id, resource, &tmdbObj)
-		objmap[k].Tmdb = tmdbObj
-	} else {
-		log.Error("TMDB", "Response", err)
 	}
 }
 
-func objToTmdb(obj any) *types.TmdbItem {
+func (t *Tmdb) prepare(obj any) *types.TmdbItem {
 	tmdb := types.TmdbItem{}
 	ms, err := json.Marshal(obj)
 	if err != nil {
@@ -128,10 +88,44 @@ func objToTmdb(obj any) *types.TmdbItem {
 		return nil
 	}
 	tmdb.Original = &obj
+
+	if (tmdb).Credits != nil {
+		if (tmdb).Credits.Crew != nil {
+			(tmdb).Credits.Crew = nil
+		}
+		if tmdb.Credits.Cast != nil {
+			// strip down cast
+			cast := tmdb.Credits.Cast
+			castlen := len(*cast)
+			if castlen > 15 {
+				castlen = 15
+			}
+			castcut := (*cast)[0:castlen]
+			tmdb.Credits.Cast = &castcut
+		}
+	}
+
+	if tmdb.Images != nil &&
+		tmdb.Images.Logos != nil {
+
+		for _, l := range *tmdb.Images.Logos {
+			if l.Iso_639_1 != nil && *(l.Iso_639_1) == "en" {
+				tmdb.LogoPath = l.FilePath
+				break
+			}
+		}
+		if tmdb.LogoPath != "" && len(*tmdb.Images.Logos) > 0 {
+			tmdb.LogoPath = (*tmdb.Images.Logos)[0].FilePath
+		}
+		tmdb.Images = nil
+	} else {
+		tmdb.LogoPath = ""
+	}
+
 	return &tmdb
 }
 
-func tmdbToObj(tmdb *types.TmdbItem) any {
+func (t *Tmdb) tmdbToObj(tmdb *types.TmdbItem) any {
 	var obj any
 	ms, err := json.Marshal(tmdb)
 	if err == nil {
@@ -153,31 +147,32 @@ func tmdbToObj(tmdb *types.TmdbItem) any {
 	return obj
 }
 
+func (t *Tmdb) CallEndpoint(endpoint string) any {
+	var data any
+	request := resty.New().
+		SetRetryCount(3).
+		SetTimeout(time.Second * 30).
+		SetRetryWaitTime(time.Second).
+		R()
+	url := TMDB_URL + endpoint + "?api_key=" + os.Getenv("TMDB_KEY") + "&append_to_response=credits,videos,images"
+	if res, err := request.SetResult(&data).SetHeader("content-type", "application/json").Get(url); err != nil {
+		log.Error("TMDB", endpoint, "status", res.StatusCode())
+	}
+	return data
+}
+
 func (t *Tmdb) GetEpisodes(showId string, seasons []string) *[]any {
-	// '/tv/$showId/season/$season?api_key=$key'
-	tsets := t.settings.GetTmdb()
-	tmdbKey := tsets.Key
 	var wg sync.WaitGroup
 	res := make([]any, 0)
 
 	for _, s := range seasons {
 		wg.Add(1)
 		go func(s string) {
-			endpoint := fmt.Sprintf("%s/tv/%s/season/%s?api_key=%s", TMDB_URL, showId, s, tmdbKey)
+			endpoint := fmt.Sprintf("/tv/%s/season/%s", showId, s)
 
 			defer wg.Done()
-			var obj any
-			request := resty.New().
-				SetRetryCount(3).
-				SetTimeout(time.Second * 30).
-				SetRetryWaitTime(time.Second).
-				R()
-			if _, err := request.SetResult(&obj).SetHeader("content-type", "application/json").Get(endpoint); err == nil {
-				log.Info("tmdb episodes", "show", showId, "season", s)
-				res = append(res, obj)
-			} else {
-				log.Error("tmdb episodes", "error", err)
-			}
+			obj := t.CallEndpoint(endpoint)
+			res = append(res, obj)
 		}(s)
 	}
 	wg.Wait()
