@@ -114,7 +114,7 @@ func (t *Tmdb) prepare(obj any) *types.TmdbItem {
 				break
 			}
 		}
-		if tmdb.LogoPath != "" && len(*tmdb.Images.Logos) > 0 {
+		if tmdb.LogoPath == "" && len(*tmdb.Images.Logos) > 0 {
 			tmdb.LogoPath = (*tmdb.Images.Logos)[0].FilePath
 		}
 		tmdb.Images = nil

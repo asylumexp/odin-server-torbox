@@ -58,11 +58,11 @@ func (s *Scraper) GetLinks(data common.Payload, mqt mqtt.Client) {
 	log.Debug("MQTT", "result topic", topic)
 	torrentQueue := make(chan types.Torrent)
 
-	// allTorrentsUnrestricted := s.helpers.ReadRDCacheByResource(topic)
-	// for _, u := range allTorrentsUnrestricted {
-	// 	cstr, _ := json.Marshal(u)
-	// 	mqt.Publish(topic, 0, false, cstr)
-	// }
+	allTorrentsUnrestricted := s.helpers.ReadRDCacheByResource(topic)
+	for _, u := range allTorrentsUnrestricted {
+		cstr, _ := json.Marshal(u)
+		mqt.Publish(topic, 0, false, cstr)
+	}
 
 	if token := mqt.Subscribe(indexertopic, 0, func(client mqtt.Client, msg mqtt.Message) {
 		if string(msg.Payload()) == "INDEXING_DONE" {
@@ -89,8 +89,15 @@ func (s *Scraper) GetLinks(data common.Payload, mqt mqtt.Client) {
 			// Filter quality from settings
 			if !funk.Contains(done, k.Magnet) && k.Quality != "720p" && k.Quality != "SD" &&
 				k.Quality != "CAM" {
-				if s.unrestrict(k, mqt, topic) {
-					d++
+
+				isUnrestricted := funk.Find(allTorrentsUnrestricted, func(s types.Torrent) bool {
+					return s.Magnet == k.Magnet
+				}) != nil
+
+				if !isUnrestricted {
+					// if s.unrestrict(k, mqt, topic) {
+					// 	d++
+					// }
 				}
 				done = append(done, k.Magnet)
 			}
@@ -108,12 +115,6 @@ func (s *Scraper) unrestrict(
 	mqt mqtt.Client,
 	topic string,
 ) bool {
-	cache := s.helpers.ReadRDCache(topic, k.Magnet)
-	if cache != nil {
-		cstr, _ := json.Marshal(cache)
-		mqt.Publish(topic, 0, false, cstr)
-		return true
-	}
 	us := s.alldebrid.Unrestrict(k.Magnet)
 	// us := s.realdebrid.Unrestrict(k.Magnet)
 	if len(us) == 0 {
