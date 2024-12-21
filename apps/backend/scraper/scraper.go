@@ -95,9 +95,9 @@ func (s *Scraper) GetLinks(data common.Payload, mqt mqtt.Client) {
 				}) != nil
 
 				if !isUnrestricted {
-					// if s.unrestrict(k, mqt, topic) {
-					// 	d++
-					// }
+					if s.unrestrict(k, mqt, topic) {
+						d++
+					}
 				}
 				done = append(done, k.Magnet)
 			}
