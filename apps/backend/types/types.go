@@ -35,6 +35,7 @@ type TraktItem struct {
 	Show      *TraktItem   `json:"show,omitempty"`
 	Movie     *TraktItem   `json:"movie,omitempty"`
 	Episode   *TraktItem   `json:"episode,omitempty"`
+	Episodes  *[]TraktItem `json:"episodes,omitempty"`
 	Title     string       `json:"title"`
 	Type      string       `json:"type"`
 	WatchedAt string       `json:"watched_at"`

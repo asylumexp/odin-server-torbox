@@ -196,7 +196,7 @@ func (t *Trakt) RefreshTokens() {
 	}
 }
 
-func (t *Trakt) normalize(objmap []types.TraktItem) []types.TraktItem {
+func (t *Trakt) normalize(objmap []types.TraktItem, isShow bool) []types.TraktItem {
 	for i, o := range objmap {
 		if o.Movie != nil || o.Episode != nil || o.Show != nil {
 			m := types.TraktItem{}
@@ -216,16 +216,28 @@ func (t *Trakt) normalize(objmap []types.TraktItem) []types.TraktItem {
 					m.Type = "show"
 				}
 			}
-			orig := (*o.Original).(map[string]any)[m.Type]
+			orig := *o.Original
+			if orig.(map[string]any)[m.Type] != nil {
+				orig = (*o.Original).(map[string]any)[m.Type]
+			}
 			m.Original = &orig
 			m.WatchedAt = o.WatchedAt
 			objmap[i] = m
+		} else {
+			t := "movie"
+			if isShow {
+				t = "show"
+			}
+			if objmap[i].Episodes != nil {
+				t = "season"
+			}
+			objmap[i].Type = t
 		}
 	}
 	return objmap
 }
 
-func (t *Trakt) objToItems(objmap []any) []types.TraktItem {
+func (t *Trakt) objToItems(objmap []any, isShow bool) []types.TraktItem {
 	jm, err := json.Marshal(objmap)
 	if err == nil {
 		items := []types.TraktItem{}
@@ -235,14 +247,11 @@ func (t *Trakt) objToItems(objmap []any) []types.TraktItem {
 			if len(items) == 0 {
 				return items
 			}
-			for i, item := range items {
+			for i := range items {
 				orig := objmap[i]
-				if orig.(map[string]any)[item.Type] != nil {
-					orig = orig.(map[string]any)[item.Type]
-				}
 				items[i].Original = &orig
 			}
-			return t.normalize(items)
+			return t.normalize(items, isShow)
 		}
 	}
 	return []types.TraktItem{}
@@ -339,7 +348,7 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 		switch objmap.(type) {
 
 		case []any:
-			items := t.objToItems(objmap.([]any))
+			items := t.objToItems(objmap.([]any), strings.Contains(endpoint, "/shows"))
 
 			if len(items) == 0 || strings.Contains(endpoint, "sync/history") {
 				return items, respHeaders, status
@@ -421,18 +430,36 @@ func (t *Trakt) getHistory(htype string) []any {
 }
 
 func (t *Trakt) AssignWatched(objmap []types.TraktItem, typ string) []types.TraktItem {
+	if typ == "season" {
+		typ = "episode"
+	}
 	history := t.getHistory(typ)
 	for i, o := range objmap {
-		oid := o.IDs.Trakt
-		objmap[i].Watched = false
-		for _, h := range history {
-			hid := uint(h.(map[string]any)["trakt_id"].(float64))
-			if hid == oid {
-				objmap[i].Watched = true
-				break
+		if o.Episodes != nil {
+			for j, e := range *o.Episodes {
+				oid := e.IDs.Trakt
+				(*objmap[i].Episodes)[j].Watched = false
+				for _, h := range history {
+					hid := uint(h.(map[string]any)["trakt_id"].(float64))
+					if hid == oid {
+						(*objmap[i].Episodes)[j].Watched = true
+						log.Debug(oid, "watched", (*objmap[i].Episodes)[j].Watched)
+						break
+					}
+				}
+			}
+		} else {
+
+			oid := o.IDs.Trakt
+			objmap[i].Watched = false
+			for _, h := range history {
+				hid := uint(h.(map[string]any)["trakt_id"].(float64))
+				if hid == oid {
+					objmap[i].Watched = true
+					break
+				}
 			}
 		}
-
 	}
 	newmap := make([]types.TraktItem, 0)
 
@@ -443,37 +470,13 @@ func (t *Trakt) AssignWatched(objmap []types.TraktItem, typ string) []types.Trak
 	return newmap
 }
 
-func (t *Trakt) GetWatchedSeasonEpisodes(objmap []any) []any {
-	history := t.getHistory("episode")
-	for _, oseason := range objmap {
-		for _, oepisode := range oseason.(map[string]any)["episodes"].([]any) {
-			oepisode.(map[string]any)["watched"] = false
-			for _, h := range history {
-				if h.(map[string]any)["trakt_id"] == oepisode.(map[string]any)["ids"].(map[string]any)["trakt"] {
-					oepisode.(map[string]any)["watched"] = true
-					break
-				}
-			}
-		}
-	}
-	newmap := make([]any, 0)
-	for _, o := range objmap {
-		newmap = append(newmap, o)
-	}
-	return newmap
-}
-
 func (t *Trakt) GetSeasons(id int) any {
-	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
-
 	cache := t.helpers.ReadTraktSeasonCache(uint(id))
 	if cache != nil {
-		return t.GetWatchedSeasonEpisodes(cache)
+		return cache
 	}
-
+	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
 	result, _, _ := t.CallEndpoint(endpoint, "GET", nil, false)
-
 	t.helpers.WriteTraktSeasonCache(uint(id), &result)
-
-	return t.GetWatchedSeasonEpisodes(result.([]any))
+	return result
 }
