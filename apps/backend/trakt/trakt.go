@@ -297,6 +297,7 @@ func (t *Trakt) itemsToObj(items []types.TraktItem) []map[string]any {
 			}
 			o[i]["show"].(map[string]any)["original"] = nil
 		}
+
 		if items[i].Episodes != nil && len(*items[i].Episodes) > 0 {
 			for e, ep := range *items[i].Episodes {
 				for k, v := range (*ep.Original).(map[string]any) {
@@ -368,10 +369,10 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 			log.Error("trakt", "unmarshal", err)
 		}
 
-		switch objmap.(type) {
+		switch objmap := objmap.(type) {
 
 		case []any:
-			items := t.objToItems(objmap.([]any), strings.Contains(endpoint, "/shows"))
+			items := t.objToItems(objmap, strings.Contains(endpoint, "/shows"))
 
 			if len(items) == 0 || strings.Contains(endpoint, "sync/history") {
 				return items, respHeaders, status
@@ -406,7 +407,7 @@ func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any
 	return objmap, respHeaders, status
 }
 
-func (t *Trakt) getTMDB(wg *sync.WaitGroup, mux *sync.Mutex, objmap []types.TraktItem) {
+func (t *Trakt) getTMDB(wg *sync.WaitGroup, _ *sync.Mutex, objmap []types.TraktItem) {
 	for k := range objmap {
 		wg.Add(1)
 		go func() {
