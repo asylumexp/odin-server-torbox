@@ -247,9 +247,17 @@ func (t *Trakt) objToItems(objmap []any, isShow bool) []types.TraktItem {
 			if len(items) == 0 {
 				return items
 			}
-			for i := range items {
-				orig := objmap[i]
-				items[i].Original = &orig
+			for i, item := range items {
+				items[i].Original = &objmap[i]
+				if item.Show != nil {
+					sorig := objmap[i].(map[string]any)["show"]
+					(*items[i].Show).Original = &sorig
+				}
+				if item.Episodes != nil && len(*item.Episodes) > 0 {
+					for e := range *item.Episodes {
+						(*items[i].Episodes)[e].Original = &objmap[i].(map[string]any)["episodes"].([]any)[e]
+					}
+				}
 			}
 			return t.normalize(items, isShow)
 		}
@@ -278,12 +286,27 @@ func (t *Trakt) itemsToObj(items []types.TraktItem) []map[string]any {
 		}
 		o[i]["original"] = nil
 		o[i]["movie"] = nil
-		if o[i]["episode"] == nil {
-			// o[i]["show"] = nil
-		} else {
+		if o[i]["episode"] != nil {
 			o[i]["episode"] = nil
 		}
-
+		if items[i].Show != nil {
+			for k, v := range (*items[i].Show.Original).(map[string]any) {
+				if o[i]["show"].(map[string]any)[k] == nil {
+					o[i]["show"].(map[string]any)[k] = v
+				}
+			}
+			o[i]["show"].(map[string]any)["original"] = nil
+		}
+		if items[i].Episodes != nil && len(*items[i].Episodes) > 0 {
+			for e, ep := range *items[i].Episodes {
+				for k, v := range (*ep.Original).(map[string]any) {
+					if o[i]["episodes"].([]any)[e].(map[string]any)[k] == nil {
+						o[i]["episodes"].([]any)[e].(map[string]any)[k] = v
+					}
+				}
+				o[i]["episodes"].([]any)[e].(map[string]any)["original"] = nil
+			}
+		}
 	}
 
 	return o
@@ -471,10 +494,10 @@ func (t *Trakt) AssignWatched(objmap []types.TraktItem, typ string) []types.Trak
 }
 
 func (t *Trakt) GetSeasons(id int) any {
-	cache := t.helpers.ReadTraktSeasonCache(uint(id))
-	if cache != nil {
-		return cache
-	}
+	// cache := t.helpers.ReadTraktSeasonCache(uint(id))
+	// if cache != nil {
+	// 	return cache
+	// }
 	endpoint := fmt.Sprintf("/shows/%d/seasons?extended=full,episodes", id)
 	result, _, _ := t.CallEndpoint(endpoint, "GET", nil, false)
 	t.helpers.WriteTraktSeasonCache(uint(id), &result)
