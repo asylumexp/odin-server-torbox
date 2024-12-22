@@ -52,11 +52,6 @@ func New(app *pocketbase.PocketBase, tmdb *tmdb.Tmdb, settings *settings.Setting
 	}
 }
 
-// Removes slice element at index(s) and returns new slice
-func remove[T any](slice []T, s int) []T {
-	return append(slice[:s], slice[s+1:]...)
-}
-
 func (t *Trakt) removeDuplicates(objmap []types.TraktItem) []types.TraktItem {
 	showsSeen := []uint{}
 	toRemove := []int{}
