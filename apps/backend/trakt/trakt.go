@@ -60,6 +60,7 @@ func (t *Trakt) removeDuplicates(objmap []types.TraktItem) []types.TraktItem {
 			continue
 		}
 		id := o.IDs.Trakt
+
 		if o.Show != nil {
 			id = o.Show.IDs.Trakt
 		}

@@ -61,15 +61,13 @@
 		loading.value = true
 		const deviceToken = await generateToken()
 
-		const d = await usePb()
-			.collection('devices')
-			.create({
-				user: usePb().authStore.model?.id,
-				token: deviceToken,
-				verified: false,
-				name: 'My Device',
-			})
-		const topic = `odinmovieshows-${id.value}`
+		const d = await usePb().collection('devices').create({
+			user: usePb().authStore.model?.id,
+			token: deviceToken,
+			verified: false,
+			name: 'My Device',
+		})
+		const topic = `odinmovieshow-${id.value}`
 		const deviceId = d.id
 		const data = {
 			url: url.value,
