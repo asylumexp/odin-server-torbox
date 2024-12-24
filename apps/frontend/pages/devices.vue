@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<h1>Devices</h1>
-		<button class="btn btn-primary" @click="openModal"><FaIcon icon="computer" /> Link Device</button>
+		<button class="btn btn-primary" @click="openModal"><FaIcon icon="computer" /> Connect</button>
 		<table class="table">
 			<tbody>
 				<tr v-for="device in devices" :key="device.id">
