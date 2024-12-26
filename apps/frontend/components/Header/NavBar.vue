@@ -18,6 +18,15 @@
 				<li>
 					<NuxtLink to="/shows"><FaIcon icon="fa-tv" />TV Shows</NuxtLink>
 				</li>
+				<li>
+					<NuxtLink to="/settings"><FaIcon icon="gears" />Settings</NuxtLink>
+				</li>
+				<li @click="linkDevice">
+					<NuxtLink to="/devices"><FaIcon icon="computer" />Devices</NuxtLink>
+				</li>
+				<li class="disabled cursor-pointer">
+					<div class="divider"></div>
+				</li>
 			</ul>
 		</div>
 		<div class="navbar-end">

@@ -8,11 +8,7 @@
 
 ![screenshot](./screenshots/odin-screenshot.png)
 
-# Introduction
-
-Odin is a self-hostable solution to watch movies and TV shows.
-
-## Key features
+# 🚀 Key features
 
 - Discover movies and shows
 - Scrobble
@@ -21,7 +17,7 @@ Odin is a self-hostable solution to watch movies and TV shows.
 - Scrape Jackett for Torrents
 - Unrestrict links with RealDebrid/AllDebrid
 
-## Prerequisites
+# 💡 Prerequisites
 
 - A Trakt API account
   - Create a new App: <https://trakt.tv/oauth/applications/new>
@@ -32,7 +28,7 @@ Odin is a self-hostable solution to watch movies and TV shows.
   - RealDebrid Account
   - AllDebrid Account
 
-## Setup with Docker (docker-compose)
+## 🐋 Setup with Docker (docker-compose)
 
 ```yaml
 services:
@@ -65,6 +61,25 @@ services:
       - MQTT_USER=<user>
       - MQTT_PASSWORD=<password>
 
+  caddy:
+    image: caddy
+    container_name: caddy
+    restart: always
+    ports:
+      - 80:80/tcp
+      - 443:443/tcp
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+
+  mqtt:
+    container_name: mqtt
+    image: eclipse-mosquitto
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: always
+
   # this is just an example config for Jackett
   jackett:
     image: lscr.io/linuxserver/jackett:latest
@@ -77,28 +92,42 @@ services:
     restart: always
 ```
 
-## Configuration
+# ⚙️ Configuration
+
+## Default admin
 
 - Login as Admin
 
-  - **User:** <admin@odin.local>, **Password:** adminOdin1
-  - Connect to RealDebrid by following the steps
+  - **E-Mail:** <admin@odin.local>, **Password:** adminOdin1
 
-  ## Creating a user
+### RealDebrid
+
+- Connect to RealDebrid by following the steps in the frontend
+
+### AllDebrid
+
+- Go to [Apikey manager](https://alldebrid.com/apikeys/)
+- Create a new API key
+- Use the key as environment variable
+
+## Creating a user
 
 - Create a new user
 - Login as user and connect to your Trakt user account, by following the steps
 
-## Connecting to Odin TV
+# 📺 Connecting to Odin TV
 
 > [!NOTE]
 > This only works with a regular user, not an admin account.
+
+> [!WARNING]
+> This process uses ntfy.sh to propagate the BACKEND_URL from the server to the App. The BACKEND_URL only needs to be accessible within your network.
 
 - Open Odin TV on your Android TV box
 - If not already, login as your user in the Odin frontend, and go to devices
 - Click on **Link device**, enter the code shown on your TV and click **Connect**
 
-## Running local dev environment
+# 💻 Running local dev environment
 
 ```bash
 # install Bun

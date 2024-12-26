@@ -4,24 +4,6 @@
 		<form @submit="submit">
 			<div class="grid grid-cols-3">
 				<div>
-					<h2>Trakt</h2>
-					<label class="label">Client ID: </label>
-					<input type="text" v-model="useSettings().settings.trakt.clientId" placeholder="trakt clientId" class="input input-sm input-bordered mr-2" />
-					<label class="label">Client Secret: </label>
-					<input type="text" v-model="useSettings().settings.trakt.clientSecret" placeholder="trakt clientSecret" class="input input-sm input-bordered mr-2" />
-				</div>
-				<div>
-					<h2>TMDB</h2>
-					<label class="label">Key: </label>
-					<input type="text" v-model="useSettings().settings.tmdb.key" placeholder="tmdb key" class="input input-sm input-bordered mr-2" />
-				</div>
-				<div>
-					<h2>Scraper</h2>
-					<label class="label">URL: </label>
-					<input type="text" v-model="useSettings().settings.scraper_url" placeholder="http://odin-scraper:6969" class="input input-sm input-bordered mr-2" />
-				</div>
-
-				<div>
 					<h2>RealDebrid</h2>
 					<RealDebrid @success="setRealDebrid" />
 				</div>

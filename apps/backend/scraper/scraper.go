@@ -36,14 +36,6 @@ func New(
 }
 
 func (s *Scraper) GetLinks(data common.Payload, mqt mqtt.Client) {
-	// mux := sync.Mutex{}
-	j := s.settings.GetJackett()
-
-	if j == nil {
-		log.Error("jackett", "error", "no settings")
-		return
-	}
-
 	topic := "odin-movieshow/" + data.Type
 	indexertopic := "odin-movieshow/indexer/" + data.Type
 	if data.Type == "episode" {
@@ -65,9 +57,6 @@ func (s *Scraper) GetLinks(data common.Payload, mqt mqtt.Client) {
 	}
 
 	if token := mqt.Subscribe(indexertopic, 0, func(client mqtt.Client, msg mqtt.Message) {
-		if string(msg.Payload()) == "INDEXING_DONE" {
-			close(torrentQueue)
-		}
 		newTorrents := []types.Torrent{}
 		json.Unmarshal(msg.Payload(), &newTorrents)
 		go func() {

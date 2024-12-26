@@ -185,6 +185,10 @@ func (ad *AllDebrid) Unrestrict(m string) []types.Unrestricted {
 		}
 		ad.CallEndpoint("/link/unlock?link="+link, "GET", nil, &u)
 		fname := u.Data.Filename
+		if fname == "" {
+			continue
+		}
+		log.Debug(fname)
 		mimetype := mime.TypeByExtension(fname[strings.LastIndex(fname, "."):])
 
 		isVideo := strings.Contains(

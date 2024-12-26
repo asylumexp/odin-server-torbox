@@ -134,10 +134,13 @@ func main() {
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
 		e.Router.POST("/scrape", func(c echo.Context) error {
 			mq := common.MqttClient()
-			log.Debug("Scraping")
 			var pl common.Payload
+			log.Debug("Scraping")
 			c.Bind(&pl)
-			scraper.GetLinks(pl, mq)
+			log.Debug(pl)
+			go func() {
+				scraper.GetLinks(pl, mq)
+			}()
 			return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 		}, RequireDeviceOrRecordAuth(app))
 

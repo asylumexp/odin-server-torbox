@@ -19,12 +19,6 @@
 					<button class="btn btn-sm">
 						<FaIcon icon="fa-trash" @click="askDelete(user)" />
 					</button>
-					<button class="btn btn-sm">
-						<FaIcon icon="fa-pencil" @click="editUser(user)" />
-					</button>
-					<button class="btn btn-sm">
-						<FaIcon icon="fa-key" @click="editPassword(user)" />
-					</button>
 				</td>
 			</tr>
 		</table>
@@ -36,7 +30,6 @@
 				<div class="modal-action">
 					<form method="dialog">
 						<button class="btn btn-primary" @click="confirmDelete()">Yes</button>
-						<!-- if there is a button in form, it will close the modal -->
 						<button class="btn">Cancel</button>
 					</form>
 				</div>
@@ -88,13 +81,106 @@
 	})
 
 	let users = ref((await usePb().collection('users').getList()).items)
-
-	let newUser = {
+	const defaultUser = {
 		username: '',
 		email: '',
 		password: '',
 		passwordConfirm: '',
+		verified: true,
+		trakt_sections: {
+			home: [
+				{
+					big: true,
+					paginate: true,
+					title: 'Trending movies',
+					url: '/movies/trending',
+				},
+				{
+					big: true,
+					paginate: true,
+					title: 'Trending shows',
+					url: '/shows/trending',
+				},
+				{
+					big: true,
+					paginate: false,
+					title: 'Your Todays episodes',
+					url: '/calendars/my/shows/::year::-::month:-1:-::day::/::monthdays::',
+				},
+				{
+					big: true,
+					paginate: false,
+					title: 'Your tomorrows episodes',
+					url: '/calendars/my/shows/::year::-::month::-::day:+1:/1',
+				},
+			],
+			movies: [
+				{
+					big: false,
+					paginate: true,
+					title: 'Most Watched Today',
+					url: '/movies/watched/daily',
+				},
+				{
+					big: false,
+					paginate: true,
+					title: 'Popular ::year::/::year:-1: releases',
+					url: '/movies/popular?years=::year::,::year:-1:',
+				},
+				{
+					big: false,
+					paginate: false,
+					title: 'Box Office',
+					url: '/movies/boxoffice',
+				},
+				{
+					big: false,
+					paginate: false,
+					title: 'Your watchlist',
+					url: '/sync/watchlist/movies/title',
+				},
+				{
+					big: false,
+					paginate: true,
+					title: 'Highly anticipated',
+					url: '/movies/anticipated',
+				},
+			],
+			shows: [
+				{
+					big: false,
+					paginate: true,
+					title: 'Most Watched today',
+					url: '/shows/watched/daily',
+				},
+				{
+					big: false,
+					paginate: true,
+					title: 'Popular ::year::/::year:-1: releases',
+					url: '/shows/popular/?years=::year::,::year:-1:',
+				},
+				{
+					big: false,
+					paginate: false,
+					title: 'Your watchlist',
+					url: '/sync/watchlist/shows/title',
+				},
+				{
+					big: false,
+					paginate: true,
+					title: 'Highly anticipated',
+					url: '/shows/anticipated',
+				},
+				{
+					big: true,
+					paginate: false,
+					title: 'Recently watched',
+					url: '/sync/watched/shows',
+				},
+			],
+		},
 	}
+	let newUser = defaultUser
 
 	let userToDelete = ref<any>()
 	let user_delete_dialog = ref<HTMLDialogElement>()
@@ -106,8 +192,8 @@
 	async function confirmDelete() {
 		if (userToDelete.value) {
 			await usePb().collection('users').delete(userToDelete.value.id)
-			userToDelete = ref(null)
 			users.value = users.value.filter((u: any) => u.id !== userToDelete.value.id)
+			userToDelete = ref(null)
 		}
 	}
 
@@ -118,19 +204,12 @@
 	async function confirmCreate(e: Event) {
 		e.preventDefault()
 		try {
-			await usePb().collection('users').create(newUser)
-			newUser = {
-				username: '',
-				email: '',
-				password: '',
-				passwordConfirm: '',
-			}
-			users.value.push(newUser as any)
+			const user = await usePb().collection('users').create(newUser)
+			users.value.push(user as any)
 			user_create_dialog.value?.close()
+			newUser = defaultUser
 		} catch (e) {}
 	}
-	async function editUser(user: any) {}
-	async function editPassword(user: any) {}
 </script>
 
 <style scoped>

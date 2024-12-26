@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<h1>Devices</h1>
-		<button class="btn btn-primary" @click="openModal"><FaIcon icon="computer" /> Connect</button>
+		<button class="btn btn-primary" @click="openModal"><FaIcon icon="computer" /> Link Device</button>
 		<table class="table">
 			<tbody>
 				<tr v-for="device in devices" :key="device.id">
@@ -22,7 +22,7 @@
 					<h1><FaIcon icon="tv" class="mr-5" />Link Device</h1>
 					<p>Please enter the code shown on your TV app</p>
 					<input type="text" class="input input-bordered mr-5" v-model="id" />
-					<button class="btn btn-md btn-primary" v-if="!verified && !loading" @click="linkDevice">Link Device</button>
+					<button class="btn btn-md btn-primary" v-if="!verified && !loading" @click="linkDevice">Connect</button>
 					<p class="text-sm m-0 mt-10">The following URL will be sent to the device:</p>
 					<p class="text-success text-sm m-0">{{ url }}</p>
 				</div>
