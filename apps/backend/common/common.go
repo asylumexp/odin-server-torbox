@@ -386,9 +386,7 @@ func MqttClient() mqtt.Client {
 	// mqtt.DEBUG = stdlog.New(os.Stdout, "", 0)
 	// mqtt.ERROR = stdlog.New(os.Stdout, "", 0)
 	opts := mqtt.NewClientOptions().
-		AddBroker(os.Getenv("MQTT_URL")).
-		SetUsername(os.Getenv("MQTT_USER")).
-		SetPassword(os.Getenv("MQTT_PASSWORD"))
+		AddBroker("ws://127.0.0.1:6060/ws/mqtt")
 	opts.SetKeepAlive(2 * time.Second)
 	opts.SetPingTimeout(1 * time.Second)
 

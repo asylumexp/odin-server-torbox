@@ -105,7 +105,9 @@ func (s *Scraper) unrestrict(
 	topic string,
 ) bool {
 	us := s.alldebrid.Unrestrict(k.Magnet)
-	// us := s.realdebrid.Unrestrict(k.Magnet)
+	if len(us) == 0 {
+		us = s.realdebrid.Unrestrict(k.Magnet)
+	}
 	if len(us) == 0 {
 		return false
 	}

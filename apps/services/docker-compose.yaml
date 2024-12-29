@@ -8,3 +8,6 @@ services:
   mqtt:
     container_name: odin-mqtt
     image: eclipse-mosquitto
+    network_mode: host
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf

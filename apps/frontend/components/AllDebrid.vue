@@ -30,7 +30,7 @@
 
 	onMounted(async () => {
 		try {
-			profile.value = await usePb().send('/_alldebrid/user', { method: 'get' })
+			profile.value = await usePb().send('/-/alldebrid/user', { method: 'get' })
 			console.log(profile.value)
 			console.log('DONE')
 		} catch (e) {

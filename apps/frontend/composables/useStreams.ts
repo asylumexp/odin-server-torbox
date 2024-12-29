@@ -36,13 +36,13 @@ export const useStreams = defineStore('useStreams', () => {
 	const topic = ref('')
 
 	const videoUrl = ref('')
-	const mqttClient = mqtt.connect(useSettings().config?.mqtt.url, {
-		username: useSettings().config?.mqtt.user,
-		password: useSettings().config?.mqtt.pass,
-	})
+	const mqttClient = mqtt.connect(`ws://${location.host}/ws/mqtt`)
 
 	mqttClient.on('connect', () => {
 		console.log('MQTT', mqttClient?.connected)
+	})
+	mqttClient.on('error', (e) => {
+		console.error('MQTT', e.message)
 	})
 	mqttClient.on('disconnect', () => {
 		console.log('MQTT', mqttClient?.connected)
@@ -70,7 +70,7 @@ export const useStreams = defineStore('useStreams', () => {
 		})
 
 		if (!list.value[id]) {
-			list.value[id] = await usePb().send('scrape', {
+			list.value[id] = await usePb().send('/-/scrape', {
 				method: 'POST',
 				body: data.value,
 				cache: 'no-cache',

@@ -36,7 +36,7 @@
 	const device_code = ref<string>()
 	let traktProfile: any = null
 	try {
-		traktProfile = await usePb().send('/_trakt/users/settings', {
+		traktProfile = await usePb().send('/-/trakt/users/settings', {
 			method: 'GET',
 		})
 	} catch (e) {
@@ -46,7 +46,7 @@
 		const settings = useSettings()
 
 		login_dialog.value?.showModal()
-		const res = await usePb().send('/_trakt/oauth/device/code?fresh=true', {
+		const res = await usePb().send('/-/trakt/oauth/device/code?fresh=true', {
 			method: 'POST',
 			body: {
 				client_id: 'd0ba20c3bb7de7c8108d02f2b2c1eb1b85f74cff5c11dd17554ac063dce9ab12',
@@ -58,7 +58,7 @@
 		device_code.value = res.device_code
 
 		const poll = setInterval(async () => {
-			const res = await usePb().send('/_trakt/oauth/device/token?fresh=true', {
+			const res = await usePb().send('/-/trakt/oauth/device/token?fresh=true', {
 				method: 'POST',
 				body: {
 					client_id: 'd0ba20c3bb7de7c8108d02f2b2c1eb1b85f74cff5c11dd17554ac063dce9ab12',

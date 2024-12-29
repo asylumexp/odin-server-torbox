@@ -2,9 +2,23 @@
     auto_https off
 }
 
-http://:6060 {
+
+(reverse-proxy-settings) {
+	header_down X-Real-IP {remote}
+	header_down -Access-Control-Allow-Origin "{http.request.header.origin}"
+	header_down -Access-Control-Allow-Headers "{http.request.header.Access-Control-Request-Headers}"
+	header_down -Access-Control-Expose-Headers "{http.request.header.Access-Control-Request-Headers}"
+	header_down -Access-Control-Allow-Credentials true
+	header_down -Access-Control-Allow-Methods "OPTIONS,HEAD,GET,POST,PUT,PATCH,DELETE"
+	header_down Host {host}
+	header_down X-Forwarded-Proto {scheme}
+}
+
+:6060 {
   reverse_proxy /api/* 127.0.0.1:8090
-  reverse_proxy /socket/* mqtt:9001
   reverse_proxy /_/* 127.0.0.1:8090
-  #reverse_proxy /* 127.0.0.1:3000
+  reverse_proxy /-/* 127.0.0.1:8090
+  reverse_proxy /ws/* 127.0.0.1:9001
+  reverse_proxy /* 127.0.0.1:3000
+
 }

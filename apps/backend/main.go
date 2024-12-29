@@ -132,7 +132,7 @@ func main() {
 		}()
 
 		e.Router.GET("/*", apis.StaticDirectoryHandler(os.DirFS("./pb_public"), false))
-		e.Router.POST("/scrape", func(c echo.Context) error {
+		e.Router.POST("/-/scrape", func(c echo.Context) error {
 			mq := common.MqttClient()
 			var pl common.Payload
 			log.Debug("Scraping")
@@ -144,12 +144,12 @@ func main() {
 			return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 		}, RequireDeviceOrRecordAuth(app))
 
-		e.Router.GET("/imdb/:id", func(c echo.Context) error {
+		e.Router.GET("/-/imdb/:id", func(c echo.Context) error {
 			id := c.PathParam("id")
 			return c.JSON(http.StatusOK, imdb.Get(id))
 		})
 
-		e.Router.GET("/device/verify/:id", func(c echo.Context) error {
+		e.Router.GET("/-/device/verify/:id", func(c echo.Context) error {
 			id := c.PathParam("id")
 			d, err := app.Dao().FindRecordById("devices", id)
 			if err == nil {
@@ -161,23 +161,7 @@ func main() {
 			return c.JSON(http.StatusNotFound, nil)
 		}, apis.RequireGuestOnly())
 
-		e.Router.GET("/backendurl", func(c echo.Context) error {
-			return c.JSON(http.StatusOK, map[string]any{"url": os.Getenv("BACKEND_URL")})
-		}, RequireDeviceOrRecordAuth(app))
-
-		e.Router.GET("/mqttconfig", func(c echo.Context) error {
-			return c.JSON(
-				http.StatusOK,
-				map[string]any{
-					"url":      os.Getenv("MQTT_URL"),
-					"user":     os.Getenv("MQTT_USER"),
-					"password": os.Getenv("MQTT_PASSWORD"),
-					"port":     443,
-				},
-			)
-		}, RequireDeviceOrRecordAuth(app))
-
-		e.Router.GET("/user", func(c echo.Context) error {
+		e.Router.GET("/-/user", func(c echo.Context) error {
 			u := c.Get("authRecord")
 			sections := make(map[string]any)
 			err := u.(*models.Record).UnmarshalJSONField("trakt_sections", &sections)
@@ -203,11 +187,11 @@ func main() {
 			return c.JSON(http.StatusOK, u)
 		}, RequireDeviceOrRecordAuth(app))
 
-		e.Router.Any("/_trakt/*", func(c echo.Context) error {
+		e.Router.Any("/-/trakt/*", func(c echo.Context) error {
 			info := apis.RequestInfo(c)
 
 			id := info.AuthRecord.Id
-			url := strings.ReplaceAll(c.Request().URL.String(), "/_trakt", "")
+			url := strings.ReplaceAll(c.Request().URL.String(), "/-/trakt", "")
 
 			rheaders := map[string]string{}
 
@@ -264,7 +248,7 @@ func main() {
 			return c.JSON(http.StatusOK, result)
 		}, RequireDeviceOrRecordAuth(app))
 
-		e.Router.Any("/_realdebrid/*", func(c echo.Context) error {
+		e.Router.Any("/-/realdebrid/*", func(c echo.Context) error {
 			url := strings.ReplaceAll(c.Request().URL.String(), "/_realdebrid", "")
 			result, headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil)
 
@@ -281,7 +265,7 @@ func main() {
 			return c.JSON(http.StatusOK, result)
 		}, apis.RequireAdminAuth())
 
-		e.Router.Any("/_alldebrid/*", func(c echo.Context) error {
+		e.Router.Any("/-/alldebrid/*", func(c echo.Context) error {
 			url := strings.ReplaceAll(c.Request().URL.String(), "/_alldebrid", "")
 			var result interface{}
 			headers, status := alldebrid.CallEndpoint(url, c.Request().Method, nil, &result)
@@ -299,21 +283,21 @@ func main() {
 			return c.JSON(http.StatusOK, result)
 		}, apis.RequireAdminAuth())
 
-		e.Router.GET("/traktseasons/:id", func(c echo.Context) error {
+		e.Router.GET("/-/traktseasons/:id", func(c echo.Context) error {
 			fmt.Println(c.PathParam("id"))
 			id, _ := strconv.Atoi(c.PathParam("id"))
 			res := trakt.GetSeasons(id)
 			return c.JSON(http.StatusOK, res)
 		}, RequireDeviceOrRecordAuth(app))
 
-		e.Router.GET("/health", func(c echo.Context) error {
+		e.Router.GET("/-/health", func(c echo.Context) error {
 			ping := c.QueryParam("ping")
 			if ping != "" {
 				return c.String(http.StatusOK, "pong")
 			}
 			rd, _, _ := realdebrid.CallEndpoint("/user", "GET", nil)
 			var ad any
-			alldebrid.CallEndpoint("/user", "GET", nil, &ad)
+			alldebrid.CallEndpoint("/-/user", "GET", nil, &ad)
 			tr, _, _ := trakt.CallEndpoint("/users/settings", "GET", nil, false)
 			info := apis.RequestInfo(c)
 			id := info.AuthRecord.Id
@@ -322,7 +306,7 @@ func main() {
 			return c.JSON(http.StatusOK, map[string]any{"realdebrid": rd, "alldebrid": ad, "trakt": tr, "user": user})
 		}, RequireDeviceOrRecordAuth(app))
 
-		e.Router.GET("/tmdbseasons/:id", func(c echo.Context) error {
+		e.Router.GET("/-/tmdbseasons/:id", func(c echo.Context) error {
 			fmt.Println(c.PathParam("id"))
 			seasons := c.QueryParam("seasons")
 			res := tmdb.GetEpisodes(c.PathParam("id"), strings.Split(seasons, ","))

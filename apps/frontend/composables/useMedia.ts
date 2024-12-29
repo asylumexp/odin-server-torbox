@@ -6,18 +6,18 @@ export const useMedia = defineStore('useMedia', () => {
 	async function getDetail(id: string, type: string) {
 		const trakt = id.split('-').at(-1) || ''
 		if (!detail.value[id] && id) {
-			const res = await usePb().send(`/_trakt/search/trakt/${trakt}?type=${type}`, { method: 'GET' })
+			const res = await usePb().send(`/-/trakt/search/trakt/${trakt}?type=${type}`, { method: 'GET' })
 			if (res.length > 0) {
 				const item = res[0]
 				if (item.type === 'show') {
-					item.seasons = await usePb().send(`/traktseasons/${item.ids.trakt}`, { method: 'GET' })
+					item.seasons = await usePb().send(`/-/traktseasons/${item.ids.trakt}`, { method: 'GET' })
 				}
 				detail.value[id] = item
 			}
 		} else {
 			if (detail.value[id].type === 'show') {
 				if (!detail.value[id].seasons) {
-					detail.value[id].seasons = await usePb().send(`/traktseasons/${detail.value[id].ids.trakt}`, { method: 'GET' })
+					detail.value[id].seasons = await usePb().send(`/-/traktseasons/${detail.value[id].ids.trakt}`, { method: 'GET' })
 				}
 			}
 		}
@@ -28,8 +28,8 @@ export const useMedia = defineStore('useMedia', () => {
 		if (term.length < 2) {
 			return []
 		}
-		const movies = await usePb().send(`/_trakt/search/movie?query=${term}`, { method: 'GET' })
-		const shows = await usePb().send(`/_trakt/search/show?query=${term}`, { method: 'GET' })
+		const movies = await usePb().send(`/-/trakt/search/movie?query=${term}`, { method: 'GET' })
+		const shows = await usePb().send(`/-/trakt/search/show?query=${term}`, { method: 'GET' })
 
 		return { movies, shows }
 	}
@@ -61,7 +61,7 @@ export const useMedia = defineStore('useMedia', () => {
 	const getList = async (url: string) => {
 		if (!lists.value[url]) {
 			try {
-				const res = await usePb().send(`/_trakt${url}`, {
+				const res = await usePb().send(`/-/trakt${url}`, {
 					method: 'GET',
 					cache: 'no-cache',
 				})
