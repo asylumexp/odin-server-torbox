@@ -22,6 +22,7 @@ import (
 	"github.com/odin-movieshow/backend/trakt"
 
 	"github.com/labstack/echo/v5"
+	_ "github.com/odin-movieshow/backend/migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -78,15 +79,10 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	if os.Getenv("BACKEND_URL") == "" {
-		log.Fatal("BACKEND_URL is required")
-		os.Exit(0)
-	}
-
 	conf := pocketbase.Config{DefaultDev: false}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
-		Automigrate: true,
+		Automigrate: false,
 	})
 
 	// serves static files from the provided public dir (if exists)

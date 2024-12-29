@@ -4,7 +4,7 @@ COPY go.mod .
 COPY go.sum .
 RUN CGO_ENABLED=0 GOOS=linux go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o odin-backend
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix -o odin-backend
 
 
 FROM alpine

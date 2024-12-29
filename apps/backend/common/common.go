@@ -3,7 +3,6 @@ package common
 import (
 	"encoding/xml"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -394,7 +393,7 @@ func MqttClient() mqtt.Client {
 	if token := c.Connect(); token.Wait() && token.Error() != nil {
 		log.Error("MQTT", "conneced", c.IsConnected())
 	} else {
-		log.Info("MQTT", "connected", c.IsConnected(), "url", os.Getenv("MQTT_URL"))
+		log.Info("MQTT", "connected", c.IsConnected())
 	}
 
 	return c
