@@ -1,8 +1,0 @@
-odin-frontend.example.com:80 {
-	reverse_proxy odin-frontend:3000
-}
-
-odin-backend.example.com:80 {
-	reverse_proxy odin-backend:8090
-}
-

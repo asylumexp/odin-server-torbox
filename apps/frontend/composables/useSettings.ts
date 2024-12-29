@@ -4,6 +4,7 @@ export const useSettings = defineStore('useSettings', () => {
 	const settings = ref()
 	const config = ref()
 	async function init() {
+		return
 		await initConfig()
 		const existing = (await usePb().collection('settings').getList()).items[0] ?? {}
 		settings.value = _.merge(
@@ -29,8 +30,8 @@ export const useSettings = defineStore('useSettings', () => {
 	}
 
 	async function initConfig() {
-		const data = (await useFetch('/api/configs')).data.value
-		config.value = data
+		// const data = (await useFetch('/configs')).data.value
+		// config.value = data
 	}
 
 	async function save() {

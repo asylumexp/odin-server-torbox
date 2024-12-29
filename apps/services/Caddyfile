@@ -1,0 +1,10 @@
+{
+    auto_https off
+}
+
+http://:6060 {
+  reverse_proxy /api/* 127.0.0.1:8090
+  reverse_proxy /socket/* mqtt:9001
+  reverse_proxy /_/* 127.0.0.1:8090
+  #reverse_proxy /* 127.0.0.1:3000
+}

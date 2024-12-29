@@ -306,6 +306,22 @@ func main() {
 			return c.JSON(http.StatusOK, res)
 		}, RequireDeviceOrRecordAuth(app))
 
+		e.Router.GET("/health", func(c echo.Context) error {
+			ping := c.QueryParam("ping")
+			if ping != "" {
+				return c.String(http.StatusOK, "pong")
+			}
+			rd, _, _ := realdebrid.CallEndpoint("/user", "GET", nil)
+			var ad any
+			alldebrid.CallEndpoint("/user", "GET", nil, &ad)
+			tr, _, _ := trakt.CallEndpoint("/users/settings", "GET", nil, false)
+			info := apis.RequestInfo(c)
+			id := info.AuthRecord.Id
+
+			user, _ := app.Dao().FindRecordById("users", id)
+			return c.JSON(http.StatusOK, map[string]any{"realdebrid": rd, "alldebrid": ad, "trakt": tr, "user": user})
+		}, RequireDeviceOrRecordAuth(app))
+
 		e.Router.GET("/tmdbseasons/:id", func(c echo.Context) error {
 			fmt.Println(c.PathParam("id"))
 			seasons := c.QueryParam("seasons")

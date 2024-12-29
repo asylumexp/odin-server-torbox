@@ -1,0 +1,10 @@
+services:
+  caddy:
+    container_name: odin-caddy
+    image: caddy
+    network_mode: host
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+  mqtt:
+    container_name: odin-mqtt
+    image: eclipse-mosquitto
