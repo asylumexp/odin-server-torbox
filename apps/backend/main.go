@@ -82,7 +82,7 @@ func main() {
 	conf := pocketbase.Config{DefaultDev: false}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
-		Automigrate: false,
+		Automigrate: true,
 	})
 
 	// serves static files from the provided public dir (if exists)
