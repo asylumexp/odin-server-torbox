@@ -5,7 +5,7 @@
 		<table class="table">
 			<tbody>
 				<tr v-for="device in devices" :key="device.id">
-					<td><FaIcon icon="check-circle" class="mr-2" :class="device.verified ? 'text-success' : ''" />{{ device.token }}</td>
+					<td><FaIcon icon="check-circle" class="mr-2" :class="device.verified ? 'text-success' : ''" />{{ device.id }}</td>
 					<td>{{ device.name }}</td>
 					<td>{{ device.created }}</td>
 				</tr>
@@ -20,11 +20,12 @@
 				</div>
 				<div v-else class="text-center">
 					<h1><FaIcon icon="tv" class="mr-5" />Link Device</h1>
+					<p class="text-sm m-0 mt-10">The following URL will be sent to the device:</p>
+					<p class="text-success text-sm m-0 mt-5">{{ url }}</p>
+					<p class="text-xs m-0 mt-1 opacity-50">Make sure the device can access it.</p>
 					<p>Please enter the code shown on your TV app</p>
 					<input type="text" class="input input-bordered mr-5" v-model="id" />
 					<button class="btn btn-md btn-primary" v-if="!verified && !loading" @click="linkDevice">Connect</button>
-					<p class="text-sm m-0 mt-10">The following URL will be sent to the device:</p>
-					<p class="text-success text-sm m-0">{{ url }}</p>
 				</div>
 			</div>
 		</dialog>
@@ -43,27 +44,14 @@
 	function openModal() {
 		dialogOpen.value = false
 		device_dialog.value?.showModal()
+		id.value = ''
 	}
 
-	async function generateToken() {
-		const id = Math.random().toString(36).substring(2).toUpperCase()
-
-		const existing = await usePb()
-			.collection('devices')
-			.getFullList({ filter: `(token='${id}')` })
-		if (existing.length > 0) {
-			return generateToken()
-		} else {
-			return id
-		}
-	}
 	async function linkDevice() {
 		loading.value = true
-		const deviceToken = await generateToken()
 
 		const d = await usePb().collection('devices').create({
 			user: usePb().authStore.model?.id,
-			token: deviceToken,
 			verified: false,
 			name: 'My Device',
 		})
@@ -94,7 +82,7 @@
 			.getFullList({ filter: `(user='${usePb().authStore.model?.id}')` })
 	}
 	onMounted(async () => {
-		url.value = (await usePb().send('/backendurl', { method: 'GET' })).url
+		url.value = `${location.protocol}//${location.host}`
 		devices.value = await getDevices()
 	})
 </script>

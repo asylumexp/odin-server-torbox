@@ -32,53 +32,19 @@
 
 ```yaml
 services:
-  odin-backend:
-    image: ghcr.io/ad-on-is/odin-movieshow/backend
-    container_name: odin-backend
+  odin:
+    image: ghcr.io/ad-on-is/odin-movieshow/odin
+    container_name: odin
     restart: always
     environment:
-      - LOG_LEVEL=debug
       - JACKETT_URL=http://jackett:9117
       - JACKETT_KEY=xxxxx
-      - BACKEND_URL=http://odin-backend.example.com # URL must be accessible within your network
-      - MQTT_URL=wss://mqtt.example.com # URL must be accessible within your network
-      - MQTT_USER=<user>
-      - MQTT_PASSWORD=<password>
       - TMDB_KEY=<tmdbkey>
       - TRAKT_CLIENTID=<trakt_clientid>
       - TRAKT_SECRET=<trakt_secret>
       - ALLDEBRID_KEY=<alldebrid_key>
     volumes:
       - ./pb_data:/pb_data
-
-  odin-frontend:
-    image: ghcr.io/ad-on-is/odin-movieshow/frontend
-    container_name: odin-frontend
-    restart: always
-    environment:
-      - BACKEND_URL=https://odin-backend.example.com # URL must be accessible within your network
-      - MQTT_URL=wss://mqtt.example.com # URL must be accessible within your network
-      - MQTT_USER=<user>
-      - MQTT_PASSWORD=<password>
-
-  caddy:
-    image: caddy
-    container_name: caddy
-    restart: always
-    ports:
-      - 80:80/tcp
-      - 443:443/tcp
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-
-  mqtt:
-    container_name: mqtt
-    image: eclipse-mosquitto
-    volumes:
-      - ./mosquitto/config:/mosquitto/config
-      - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
-    restart: always
 
   # this is just an example config for Jackett
   jackett:
@@ -92,13 +58,14 @@ services:
     restart: always
 ```
 
-# ⚙️ Configuration
+# 1️⃣ First steps
 
-## Default admin
-
-- Login as Admin
-
+- Log in as admin
   - **E-Mail:** <admin@odin.local>, **Password:** adminOdin1
+- Configure RealDebrid
+- Create a new user
+
+# ⚙️ Configuration
 
 ### RealDebrid
 
@@ -110,10 +77,31 @@ services:
 - Create a new API key
 - Use the key as environment variable
 
-## Creating a user
+### Trakt
 
-- Create a new user
-- Login as user and connect to your Trakt user account, by following the steps
+- Log in as a **User**
+- Go to Profile
+- In the Trakt section click on "Login" and follow the steps
+
+#### Trakt Lists
+
+- Go to settings
+- Add lists, with title and url in the desired section
+
+> [!INFO]
+>
+> [Trakt API](https://trakt.docs.apiary.io/) for info about possible endpoints
+>
+> Example: /movies/trending
+
+#### Placeholders
+
+- `::(year|month|day)::` current year|month|day
+- `::(year|month|day):-1:` current year|month|day +1 (or -1)
+- `::monthdays::` days of the current month
+
+Examples:
+`/movies/popular?years=::year::,::year:-1:` -> `/movies/popular?years=2024,2023`
 
 # 📺 Connecting to Odin TV
 
@@ -121,10 +109,10 @@ services:
 > This only works with a regular user, not an admin account.
 
 > [!WARNING]
-> This process uses ntfy.sh to propagate the BACKEND_URL from the server to the App. The BACKEND_URL only needs to be accessible within your network.
+> This process uses ntfy.sh to propagate the public URL from the server to the App. The public URL only needs to be accessible within your network where the Android TV is running on.
 
-- Open Odin TV on your Android TV box
-- If not already, login as your user in the Odin frontend, and go to devices
+- Open Odin TV on your Android TV box. A screen with a code should show up.
+- Login as your user in the Odin frontend, and go to devices
 - Click on **Link device**, enter the code shown on your TV and click **Connect**
 
 # 💻 Running local dev environment

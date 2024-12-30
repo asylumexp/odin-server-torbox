@@ -108,6 +108,9 @@ func main() {
 			a = &models.Admin{Email: email}
 			a.SetPassword(password)
 			app.Dao().SaveAdmin(a)
+		} else {
+			a.SetPassword(password)
+			app.Dao().SaveAdmin(a)
 		}
 
 		scheduler := cron.New()

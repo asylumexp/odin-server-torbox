@@ -1,6 +1,6 @@
 <template>
-	<div>
-		<div class="card w-96 bg-base-200 text-neutral-content m-auto mt-20 shadow-lg">
+	<div class="pt-20">
+		<div class="card w-96 bg-base-200 text-neutral-content m-auto shadow-lg">
 			<form class="card-body items-center text-center" @submit="login">
 				<img src="/logo.svg" alt="logo" class="w-24 mb-5" />
 				<h2 class="card-title mb-5">Enjoy movies & TV</h2>
@@ -21,8 +21,6 @@
 	definePageMeta({
 		layout: 'empty',
 	})
-
-	await useSettings().initConfig()
 
 	const email = ref('')
 	const password = ref('')
