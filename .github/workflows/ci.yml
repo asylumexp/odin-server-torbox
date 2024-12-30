@@ -2,8 +2,8 @@ name: CI - Build and push
 
 on:
   push:
-    branches:
-      - "main"
+    tags:
+      - "*"
 
 jobs:
   build-and-push:
