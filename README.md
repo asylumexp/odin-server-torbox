@@ -65,25 +65,25 @@ services:
 - Configure RealDebrid
 - Create a new user
 
-# ⚙️ Configuration
+# Configuration
 
-### RealDebrid
+## RealDebrid
 
 - Connect to RealDebrid by following the steps in the frontend
 
-### AllDebrid
+## AllDebrid
 
 - Go to [Apikey manager](https://alldebrid.com/apikeys/)
 - Create a new API key
 - Use the key as environment variable
 
-### Trakt
+## Trakt
 
 - Log in as a **User**
 - Go to Profile
 - In the Trakt section click on "Login" and follow the steps
 
-#### Trakt Lists
+### Trakt Lists
 
 - Go to settings
 - Add lists, with title and url in the desired section
