@@ -180,7 +180,10 @@ func (ad *AllDebrid) Unrestrict(m string) []types.Unrestricted {
 			Data struct {
 				Link     string `json:"link"`
 				Filename string `json:"filename"`
-				Filesize int    `json:"filesize"`
+				Streams  []struct {
+					Id string `json:"id"`
+				} `json:"streams"`
+				Filesize int `json:"filesize"`
 			} `json:"data"`
 		}
 		ad.CallEndpoint("/link/unlock?link="+link, "GET", nil, &u)

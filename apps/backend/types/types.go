@@ -54,7 +54,8 @@ type TraktItem struct {
 }
 
 type Unrestricted struct {
-	Filename string `json:"filename"`
-	Download string `json:"download"`
-	Filesize int    `json:"filesize"`
+	Filename string   `json:"filename"`
+	Download string   `json:"download"`
+	Streams  []string `json:"stream"`
+	Filesize int      `json:"filesize"`
 }

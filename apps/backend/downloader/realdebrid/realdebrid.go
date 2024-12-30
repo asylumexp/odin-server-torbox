@@ -30,7 +30,8 @@ func New(app *pocketbase.PocketBase, settings *settings.Settings) *RealDebrid {
 }
 
 func (rd *RealDebrid) RemoveByType(t string) {
-	res, headers, _ := rd.CallEndpoint(fmt.Sprintf("/%s/?limit=1", t), "GET", nil)
+	var res interface{}
+	headers, _ := rd.CallEndpoint(fmt.Sprintf("/%s/?limit=1", t), "GET", nil, &res)
 	if res == nil {
 		return
 	}
@@ -44,11 +45,13 @@ func (rd *RealDebrid) RemoveByType(t string) {
 	}
 
 	for count > 0 {
-		res, _, _ := rd.CallEndpoint(fmt.Sprintf("/%s/?limit=200", t), "GET", nil)
+
+		rd.CallEndpoint(fmt.Sprintf("/%s/?limit=200", t), "GET", nil, &res)
 		for _, v := range res.([]any) {
 			rd.CallEndpoint(
-				fmt.Sprintf("/%s/delete/%s", t, v.(map[string]any)["id"].(string)),
+				fmt.Sprintf("/%s/delete/%s", t, v.(map[string]any)["id"].(string), nil),
 				"DELETE",
+				nil,
 				nil,
 			)
 		}
@@ -99,8 +102,8 @@ func (rd *RealDebrid) CallEndpoint(
 	endpoint string,
 	method string,
 	body map[string]string,
-) (any, http.Header, int) {
-	var data any
+	data interface{},
+) (http.Header, int) {
 	request := resty.New().
 		SetRetryCount(3).
 		SetRetryWaitTime(time.Second * 1).
@@ -142,7 +145,7 @@ func (rd *RealDebrid) CallEndpoint(
 		status = resp.StatusCode()
 	} else {
 		log.Error("realdebrid", "url", endpoint, "error", err)
-		return data, respHeaders, status
+		return respHeaders, status
 	}
 
 	if status > 299 {
@@ -159,52 +162,65 @@ func (rd *RealDebrid) CallEndpoint(
 		log.Debug("realdebrid", "call", fmt.Sprintf("%s %s", method, endpoint))
 	}
 
-	return data, respHeaders, status
+	return respHeaders, status
+}
+
+type Magnet struct {
+	Id string `json:"id"`
+}
+
+type Info struct {
+	Links []string `json:"links"`
+}
+
+type Link struct {
+	Id         string `json:"id"`
+	Filename   string `json:"filename"`
+	Filesize   uint   `json:"filesize"`
+	Download   string `json:"download"`
+	Streamable int    `json:"streamable`
 }
 
 func (rd *RealDebrid) Unrestrict(m string) []types.Unrestricted {
-	magnet, _, _ := rd.CallEndpoint("/torrents/addMagnet", "POST", map[string]string{
+	magnet := Magnet{}
+	rd.CallEndpoint("/torrents/addMagnet", "POST", map[string]string{
 		"host":   "real-debrid.com",
 		"magnet": m,
-	})
+	}, &magnet)
 
-	if magnet == nil || magnet.(map[string]any)["id"] == nil {
+	if magnet.Id == "" {
 		return nil
 	}
 
-	magnetId := magnet.(map[string]any)["id"].(string)
 	defer rd.CallEndpoint(
-		fmt.Sprintf("/torrents/delete/%s", magnetId),
+		fmt.Sprintf("/torrents/delete/%s", magnet.Id),
 		"DELETE",
+		nil,
 		nil,
 	)
 
-	rd.CallEndpoint("/torrents/selectFiles/"+magnetId, "POST", map[string]string{
+	rd.CallEndpoint("/torrents/selectFiles/"+magnet.Id, "POST", map[string]string{
 		"files": "all",
-	})
+	}, nil)
 
-	info, _, _ := rd.CallEndpoint("/torrents/info/"+magnetId, "GET", nil)
+	info := Info{}
+	rd.CallEndpoint("/torrents/info/"+magnet.Id, "GET", nil, &info)
 
-	if info == nil {
+	if len(info.Links) == 0 {
 		return nil
 	}
-
-	if info.(map[string]any)["links"] == nil {
-		return nil
-	}
-
-	links := info.(map[string]any)["links"].([]any)
 
 	us := []types.Unrestricted{}
 
-	for _, v := range links {
-		u, _, _ := rd.CallEndpoint("/unrestrict/link", "POST", map[string]string{
-			"link": v.(string),
-		})
-		if u == nil {
+	for _, v := range info.Links {
+		u := Link{}
+		rd.CallEndpoint("/unrestrict/link", "POST", map[string]string{
+			"link": v,
+		}, &u)
+		if u.Filename == "" {
 			continue
 		}
-		fname := u.(map[string]any)["filename"].(string)
+		fname := u.Filename
 
 		mimetype := mime.TypeByExtension(fname[strings.LastIndex(fname, "."):])
 
@@ -217,7 +233,11 @@ func (rd *RealDebrid) Unrestrict(m string) []types.Unrestricted {
 
 		if !match && isVideo {
 			log.Debug("realdebrid unrestricted", "file", fname)
-			un := types.Unrestricted{Filename: fname, Filesize: int(u.(map[string]any)["size"].(float64)), Download: u.(map[string]any)["download"].(string)}
+			streams := []string{}
+			if u.Streamable == 1 {
+				streams = append(streams, "https://real-debrid.com/streaming-"+u.Id)
+			}
+			un := types.Unrestricted{Filename: fname, Filesize: int(u.Filesize), Download: u.Download, Streams: streams}
 			us = append(us, un)
 		}
 	}

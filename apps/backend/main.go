@@ -249,7 +249,8 @@ func main() {
 
 		e.Router.Any("/-/realdebrid/*", func(c echo.Context) error {
 			url := strings.ReplaceAll(c.Request().URL.String(), "/_realdebrid", "")
-			result, headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil)
+			var result interface{}
+			headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil, &result)
 
 			for k, v := range headers {
 				if funk.Contains([]string{
@@ -294,7 +295,8 @@ func main() {
 			if ping != "" {
 				return c.String(http.StatusOK, "pong")
 			}
-			rd, _, _ := realdebrid.CallEndpoint("/user", "GET", nil)
+			var rd any
+			realdebrid.CallEndpoint("/user", "GET", nil, &rd)
 			var ad any
 			alldebrid.CallEndpoint("/-/user", "GET", nil, &ad)
 			tr, _, _ := trakt.CallEndpoint("/users/settings", "GET", nil, false)
