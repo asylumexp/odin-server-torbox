@@ -6,7 +6,7 @@ on:
       - "*"
 
 concurrency:
-  group: Build and push
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
