@@ -5,13 +5,30 @@ export default defineNuxtRouteMiddleware(async (to, _) => {
 	console.log('valid', usePb().authStore.isValid)
 	console.log('admin', usePb().authStore.isAdmin)
 	console.log('paths', to.path)
-	if (
-		id !== null &&
-		usePb().authStore.isValid &&
-		((usePb().authStore.isAdmin && !(await usePb().admins.getOne(id))) || (!usePb().authStore.isAdmin && !(await usePb().collection('users').getOne(id))))
-	) {
-		console.log('NO USER')
-		usePb().authStore.clear()
+	if (id !== null && usePb().authStore.isValid) {
+		let a = null
+		try {
+			a = await usePb().admins.getOne(id)
+		} catch (_) {}
+		if (usePb().authStore.isAdmin) {
+			if (a !== null) {
+				return
+			}
+			console.log('NO ADMIN')
+			usePb().authStore.clear()
+			return navigateTo('/login')
+		} else {
+			let u = null
+			try {
+				u = await usePb().collection('users').getOne(id)
+			} catch (_) {}
+			if (u !== null) {
+				return
+			}
+			console.log('NO USER')
+			usePb().authStore.clear()
+			return navigateTo('/login')
+		}
 	}
 	if (usePb().authStore.isValid && ['/login'].includes(to.path)) {
 		if (usePb().authStore.isAdmin) {

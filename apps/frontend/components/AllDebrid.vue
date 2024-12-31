@@ -8,15 +8,7 @@
 				<p>{{ profile.data.user.premiumUntil }}</p>
 			</div>
 			<div v-else>
-				<dialog ref="login_dialog" class="modal">
-					<div class="modal-box">
-						<h3 class="font-bold text-lg">Login to RealDebrid</h3>
-						<p class="py-4">Go to: {{ url }}</p>
-						<p class="py-4">Enter code:</p>
-						<p>{{ pin }}</p>
-					</div>
-				</dialog>
-				<button class="btn" @click="allDebridLogin()">Login</button>
+				<p>Not connected!</p>
 			</div>
 		</div>
 	</div>
@@ -31,8 +23,6 @@
 	onMounted(async () => {
 		try {
 			profile.value = await usePb().send('/-/alldebrid/user', { method: 'get' })
-			console.log(profile.value)
-			console.log('DONE')
 		} catch (e) {
 			console.error(e)
 		}

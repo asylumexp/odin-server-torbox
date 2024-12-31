@@ -1,11 +1,11 @@
 <template>
 	<div>
-		<h1><FaIcon icon="fa-users" />Users</h1>
+		<h1 class="mb-0">Users</h1>
 
-		<table class="table table-zebra">
+		<table class="table table-zebra mt-0">
 			<thead>
 				<tr>
-					<td></td>
+					<td>ID</td>
 					<td>Username</td>
 					<td>Email</td>
 					<td></td>
@@ -76,10 +76,6 @@
 </template>
 
 <script lang="ts" setup>
-	definePageMeta({
-		layout: 'admin',
-	})
-
 	let users = ref((await usePb().collection('users').getList()).items)
 	const defaultUser = {
 		username: '',

@@ -3,21 +3,10 @@
 		<div class="navbar bg-base-100">
 			<div class="navbar-start">
 				<div class="dropdown">
-					<div tabindex="0" role="button" class="btn btn-ghost btn-circle">
-						<h1>ODIN</h1>
-					</div>
+					<div tabindex="0" role="button" class="btn btn-ghost btn-circle"><img src="/logo.svg" alt="logo" class="w-16" />ADMIN</div>
 				</div>
 			</div>
-			<div class="navbar-center hidden lg:flex">
-				<ul class="menu menu-horizontal px-1">
-					<li>
-						<NuxtLink to="/admin/users"><FaIcon icon="fa-users" />Users</NuxtLink>
-					</li>
-					<li>
-						<NuxtLink to="/admin/settings"><FaIcon icon="fa-gears" />Settings</NuxtLink>
-					</li>
-				</ul>
-			</div>
+			<div class="navbar-center hidden lg:flex"></div>
 			<div class="navbar-end">
 				<div class="dropdown dropdown-end">
 					<div tabindex="0" class="avatar placeholder cursor-pointer">

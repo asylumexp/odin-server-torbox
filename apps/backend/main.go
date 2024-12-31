@@ -248,7 +248,7 @@ func main() {
 		}, RequireDeviceOrRecordAuth(app))
 
 		e.Router.Any("/-/realdebrid/*", func(c echo.Context) error {
-			url := strings.ReplaceAll(c.Request().URL.String(), "/_realdebrid", "")
+			url := strings.ReplaceAll(c.Request().URL.String(), "/-/realdebrid", "")
 			var result interface{}
 			headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil, &result)
 
@@ -266,7 +266,7 @@ func main() {
 		}, apis.RequireAdminAuth())
 
 		e.Router.Any("/-/alldebrid/*", func(c echo.Context) error {
-			url := strings.ReplaceAll(c.Request().URL.String(), "/_alldebrid", "")
+			url := strings.ReplaceAll(c.Request().URL.String(), "/-/alldebrid", "")
 			var result interface{}
 			headers, status := alldebrid.CallEndpoint(url, c.Request().Method, nil, &result)
 
