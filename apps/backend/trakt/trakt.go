@@ -312,10 +312,12 @@ func (t *Trakt) itemsToObj(items []types.TraktItem) []map[string]any {
 func (t *Trakt) CallEndpoint(endpoint string, method string, body map[string]any, donorm bool) (any, http.Header, int) {
 	var objmap any
 
+	hs := t.Headers
+
 	request := resty.New().SetRetryCount(3).SetRetryWaitTime(time.Second * 3).R()
 	request.SetHeader("trakt-api-version", "2").SetHeader("content-type", "application/json").SetHeader("trakt-api-key", os.Getenv("TRAKT_CLIENTID")).AddRetryCondition(func(r *resty.Response, err error) bool {
 		return r.StatusCode() == 401
-	}).SetHeaders(t.Headers)
+	}).SetHeaders(hs)
 
 	var respHeaders http.Header
 	status := 200

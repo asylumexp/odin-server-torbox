@@ -24,7 +24,7 @@
   - Note down the Trakt `clientId` and `clientSecret`
 - TMDB account
   - Note down the `apiKey`
-- One of:
+- At least one of:
   - RealDebrid Account
   - AllDebrid Account
 
@@ -37,12 +37,13 @@ services:
     container_name: odin
     restart: always
     environment:
+      - LOG_LEVEL=info
       - JACKETT_URL=http://jackett:9117
       - JACKETT_KEY=xxxxx
       - TMDB_KEY=<tmdbkey>
       - TRAKT_CLIENTID=<trakt_clientid>
       - TRAKT_SECRET=<trakt_secret>
-      - ALLDEBRID_KEY=<alldebrid_key>
+      - ALLDEBRID_KEY=<alldebrid_key> # if you have an AllDebrid account
     volumes:
       - ./pb_data:/pb_data
 

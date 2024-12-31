@@ -42,12 +42,6 @@
 					<li>
 						<NuxtLink to="/profile"><FaIcon icon="user" /> Profile ({{ useProfile().me?.username }}) </NuxtLink>
 					</li>
-					<li>
-						<NuxtLink to="/settings"><FaIcon icon="gears" />Settings</NuxtLink>
-					</li>
-					<li @click="linkDevice">
-						<NuxtLink to="/devices"><FaIcon icon="computer" />Devices</NuxtLink>
-					</li>
 					<li class="disabled cursor-pointer">
 						<div class="divider"></div>
 					</li>

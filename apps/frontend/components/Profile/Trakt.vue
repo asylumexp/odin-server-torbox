@@ -3,9 +3,6 @@
 		<div class="card-body">
 			<h2 class="card-title">Trakt</h2>
 			<p>{{ traktProfile.user.username }}<br />{{ traktProfile.user.name }}</p>
-			<div class="card-actions justify-end">
-				<button class="btn btn-primary">Refresh</button>
-			</div>
 		</div>
 	</div>
 	<div v-else class="card w-96 bg-base-100 shadow-xl">
@@ -23,7 +20,7 @@
 			<h2 class="card-title">Trakt</h2>
 			<p>Click below to login into Trakt</p>
 			<div class="card-actions justify-end">
-				<button class="btn" @click="traktLogin()">Login</button>
+				<button class="btn btn-sm" @click="traktLogin()">Login</button>
 			</div>
 		</div>
 	</div>
