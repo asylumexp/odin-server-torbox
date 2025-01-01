@@ -44,6 +44,8 @@ services:
     image: ghcr.io/ad-on-is/odin:latest
     container_name: odin
     restart: always
+    ports:
+      - 6060:6060
     environment:
       - LOG_LEVEL=info
       - JACKETT_URL=http://jackett:9117
@@ -65,6 +67,10 @@ services:
     volumes:
       - ./jackett:/config
     restart: always
+
+  # use a reverse proxy to serve the app
+  # nginx:
+  # caddy:
 ```
 
 # 1️⃣ First steps
