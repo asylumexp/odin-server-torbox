@@ -11,6 +11,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/ad-on-is/odin-server.svg?style=social&label=Stars)]()
 
 ![screenshot](./screenshots/odin-screenshot.png)
+![screenshot2](./screenshots/odin-screenshot2.png)
 
 # 🚀 Key features
 
@@ -128,12 +129,15 @@ Examples:
 > [!NOTE]
 > This only works with a regular user, not an admin account.
 
-> [!WARNING]
-> This process uses ntfy.sh to propagate the public URL from the server to the App. The public URL only needs to be accessible within your network where the Android TV is running on.
-
+- Install the [Odin TV](https://github.com/ad-on-is/odin-tv) app on your Android TV box
 - Open Odin TV on your Android TV box. A screen with a code should show up.
 - Login as your user in the Odin frontend, and go to devices
 - Click on **Link device**, enter the code shown on your TV and click **Connect**
+
+![connect](./screenshots/connect.png)
+
+> [!NOTE]
+> This process uses ntfy.sh to propagate the public URL from the server to the App. The public URL only needs to be accessible within your network where the Android TV is running on.
 
 # 💻 Running local dev environment
 
