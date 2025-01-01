@@ -7,8 +7,8 @@
 <h2 align="center">To be used with <a href="https://github.com/ad-on-is/odin-tv">Odin TV</a></h2>
 
 ![release](https://github.com/ad-on-is/odin-server/actions/workflows/ci.yml/badge.svg?branch=)
-[![Version](https://img.shields.io/github/release/ad-on-is/odin-server.svg?style=flat)]()
-[![GitHub stars](https://img.shields.io/github/stars/ad-on-is/odin-server.svg?style=social&label=Star)]()
+[![Version](https://img.shields.io/github/v/tag/ad-on-is/odin-server.svg?style=flat)]()
+[![GitHub stars](https://img.shields.io/github/stars/ad-on-is/odin-server.svg?style=social&label=Stars)]()
 
 ![screenshot](./screenshots/odin-screenshot.png)
 
