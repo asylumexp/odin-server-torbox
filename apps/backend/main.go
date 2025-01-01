@@ -148,16 +148,23 @@ func main() {
 			return c.JSON(http.StatusOK, imdb.Get(id))
 		})
 
-		e.Router.GET("/-/device/verify/:id", func(c echo.Context) error {
+		e.Router.GET("/-/device/verify/:id/:name", func(c echo.Context) error {
 			id := c.PathParam("id")
+			name := c.PathParam("name")
 			d, err := app.Dao().FindRecordById("devices", id)
-			if err == nil {
-				d.Set("verified", true)
-				app.Dao().SaveRecord(d)
-				log.Info("Device verified", "id", id)
-				return c.JSON(http.StatusOK, d)
+			if err != nil {
+				return c.JSON(http.StatusNotFound, nil)
 			}
-			return c.JSON(http.StatusNotFound, nil)
+			uid := d.Get("user").(string)
+			u, err := app.Dao().FindRecordById("users", uid)
+			if err != nil {
+				return c.JSON(http.StatusNotFound, nil)
+			}
+			d.Set("verified", true)
+			d.Set("name", name)
+			app.Dao().SaveRecord(d)
+			log.Info("Device verified", "id", id)
+			return c.JSON(http.StatusOK, u)
 		}, apis.RequireGuestOnly())
 
 		e.Router.GET("/-/user", func(c echo.Context) error {
@@ -298,13 +305,10 @@ func main() {
 			var rd any
 			realdebrid.CallEndpoint("/user", "GET", nil, &rd)
 			var ad any
-			alldebrid.CallEndpoint("/-/user", "GET", nil, &ad)
+			alldebrid.CallEndpoint("/user", "GET", nil, &ad)
 			tr, _, _ := trakt.CallEndpoint("/users/settings", "GET", nil, false)
-			info := apis.RequestInfo(c)
-			id := info.AuthRecord.Id
 
-			user, _ := app.Dao().FindRecordById("users", id)
-			return c.JSON(http.StatusOK, map[string]any{"realdebrid": rd, "alldebrid": ad, "trakt": tr, "user": user})
+			return c.JSON(http.StatusOK, map[string]any{"realdebrid": rd, "alldebrid": ad, "trakt": tr})
 		}, RequireDeviceOrRecordAuth(app))
 
 		e.Router.GET("/-/tmdbseasons/:id", func(c echo.Context) error {

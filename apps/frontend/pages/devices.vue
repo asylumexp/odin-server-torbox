@@ -78,7 +78,7 @@
 	async function getDevices() {
 		return await usePb()
 			.collection('devices')
-			.getFullList({ filter: `(user='${usePb().authStore.model?.id}')` })
+			.getFullList({ filter: `(user='${usePb().authStore.model?.id}')`, sort: '-created' })
 	}
 	onMounted(async () => {
 		url.value = `${location.protocol}//${location.host}`

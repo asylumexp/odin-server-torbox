@@ -6,6 +6,10 @@
 
 <h2 align="center">To be used with <a href="https://github.com/ad-on-is/odin-tv">Odin TV</a></h2>
 
+![release](https://github.com/ad-on-is/odin-server/actions/workflows/ci.yml/badge.svg?branch=)
+[![Version](https://img.shields.io/github/release/ad-on-is/odin-server.svg?style=flat)]()
+[![GitHub stars](https://img.shields.io/github/stars/ad-on-is/odin-server.svg?style=social&label=Star)]()
+
 ![screenshot](./screenshots/odin-screenshot.png)
 
 # 🚀 Key features
@@ -15,18 +19,21 @@
 - See your watchlists
 - Setup custom sections from Trakt lists
 - Scrape Jackett for Torrents
+- Multi-User support
 - Unrestrict links with RealDebrid/AllDebrid
 
 # 💡 Prerequisites
 
-- A Trakt API account
-  - Create a new App: <https://trakt.tv/oauth/applications/new>
-  - Note down the Trakt `clientId` and `clientSecret`
-- TMDB account
-  - Note down the `apiKey`
+> [!WARNING]
+>
+> In order to make sure Odin works as expected, please setup these things before starting the app.
+
+- Trakt API credentials
+- TMDB API key
+- A working Jackett server
 - At least one of:
   - RealDebrid Account
-  - AllDebrid Account
+  - AllDebrid API_KEY
 
 ## 🐋 Setup with Docker (docker-compose)
 
@@ -60,6 +67,18 @@ services:
 ```
 
 # 1️⃣ First steps
+
+## Trakt
+
+- Create a new App: <https://trakt.tv/oauth/applications/new>
+- Note down the Trakt `clientId` and `clientSecret`
+
+## TMDB
+
+- Create a new account and get an API key: <https://www.themoviedb.org/settings/api>
+- Note down the `apiKey`
+
+## Prepare the server
 
 - Log in as admin
   - **E-Mail:** <admin@odin.local>, **Password:** adminOdin1
