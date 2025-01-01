@@ -41,7 +41,7 @@
 ```yaml
 services:
   odin:
-    image: ghcr.io/ad-on-is/odin-movieshow/odin
+    image: ghcr.io/ad-on-is/odin:latest
     container_name: odin
     restart: always
     environment:
