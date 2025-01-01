@@ -152,7 +152,13 @@ bun install
 
 # run dev
 bun --bun run dev
+
+
 ```
+
+# Donations
+
+<img src="./screenshots/btc_donation.png" height="200" />
 
 ## License
 
