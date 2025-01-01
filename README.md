@@ -32,6 +32,7 @@
 - Trakt API credentials
 - TMDB API key
 - A working Jackett server
+  - Make sure you have some good indexers set up
 - At least one of:
   - RealDebrid Account
   - AllDebrid API_KEY
@@ -57,7 +58,6 @@ services:
     volumes:
       - ./pb_data:/pb_data
 
-  # this is just an example config for Jackett
   jackett:
     image: lscr.io/linuxserver/jackett:latest
     container_name: jackett
@@ -67,6 +67,12 @@ services:
     volumes:
       - ./jackett:/config
     restart: always
+  flaresolverr:
+    container_name: flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: always
+    environment:
+      - LOG_LEVEL=info
 
   # use a reverse proxy to serve the app
   # nginx:
