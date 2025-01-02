@@ -94,7 +94,7 @@ services:
 ## Prepare the server
 
 - Log in as admin
-  - **E-Mail:** <admin@odin.local>, **Password:** adminOdin1
+  - **E-Mail:** <admin@odin.local>, **Password:** odinAdmin1
 - Configure RealDebrid
 - Create a new user
 
