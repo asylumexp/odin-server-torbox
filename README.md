@@ -97,6 +97,7 @@ services:
 
 - Log in as admin
   - **E-Mail:** <admin@odin.local>, **Password:** odinAdmin1
+  - If you've set them via the environment variables, use these instead
 - Configure RealDebrid
 - Create a new user
 
