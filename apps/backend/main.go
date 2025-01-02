@@ -319,6 +319,10 @@ func main() {
 			return c.JSON(http.StatusOK, res)
 		}, RequireDeviceOrRecordAuth(app))
 
+		e.Router.GET("/-/secrets", func(c echo.Context) error {
+			return c.JSON(http.StatusOK, map[string]string{"TRAKT_CLIENTID": os.Getenv("TRAKT_CLIENTID"), "TRAKT_SECRET": os.Getenv("TRAKT_SECRET")})
+		})
+
 		e.Router.GET("/-/health", func(c echo.Context) error {
 			ping := c.QueryParam("ping")
 			if ping != "" {

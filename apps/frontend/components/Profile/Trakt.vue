@@ -31,22 +31,29 @@
 	const user_code = ref<string>()
 	const url = ref<string>()
 	const device_code = ref<string>()
-	let traktProfile: any = null
-	try {
-		traktProfile = await usePb().send('/-/trakt/users/settings', {
-			method: 'GET',
-		})
-	} catch (e) {
-		console.log(e)
+	const traktProfile = ref(null)
+
+	async function getProfile() {
+		try {
+			traktProfile.value = await usePb().send('/-/trakt/users/settings', {
+				method: 'GET',
+			})
+		} catch (e) {
+			console.log(e)
+		}
 	}
+
+	onMounted(async () => {
+		getProfile()
+	})
 	async function traktLogin() {
-		const settings = useSettings()
+		const secrets = await usePb().send('/-/secrets', { method: 'get' })
 
 		login_dialog.value?.showModal()
 		const res = await usePb().send('/-/trakt/oauth/device/code?fresh=true', {
 			method: 'POST',
 			body: {
-				client_id: 'd0ba20c3bb7de7c8108d02f2b2c1eb1b85f74cff5c11dd17554ac063dce9ab12',
+				client_id: secrets['TRAKT_CLIENTID'],
 			},
 		})
 
@@ -58,8 +65,8 @@
 			const res = await usePb().send('/-/trakt/oauth/device/token?fresh=true', {
 				method: 'POST',
 				body: {
-					client_id: 'd0ba20c3bb7de7c8108d02f2b2c1eb1b85f74cff5c11dd17554ac063dce9ab12',
-					client_secret: '1643cc9159f628ff5c42bf023732b0c1f21f1e1e618ab95f68c9e3d5fb1f7186',
+					client_id: secrets['TRAKT_CLIENTID'],
+					client_secret: secrets['TRAKT_SECRET'],
 					code: device_code.value,
 				},
 			})
@@ -68,6 +75,7 @@
 				await usePb()
 					.collection('users')
 					.update(usePb().authStore.model?.id, { trakt_token: { ...res, device_code: device_code.value } })
+				getProfile()
 				clearInterval(poll)
 				login_dialog.value?.close()
 			}
