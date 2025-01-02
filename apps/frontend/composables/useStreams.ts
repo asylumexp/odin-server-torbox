@@ -36,16 +36,18 @@ export const useStreams = defineStore('useStreams', () => {
 	const topic = ref('')
 
 	const videoUrl = ref('')
-	const mqttClient = mqtt.connect(`ws://${location.host}/ws/mqtt`)
+	const proto = location.protocol.includes('https') ? 'wss' : 'ws'
+	const url = `${proto}://${location.host}/ws/mqtt`
+	const mqttClient = mqtt.connect(url)
 
 	mqttClient.on('connect', () => {
-		console.log('MQTT', mqttClient?.connected)
+		console.log('MQTT', mqttClient?.connected, url)
 	})
 	mqttClient.on('error', (e) => {
 		console.error('MQTT', e.message)
 	})
 	mqttClient.on('disconnect', () => {
-		console.log('MQTT', mqttClient?.connected)
+		console.log('MQTT', mqttClient?.connected, url)
 	})
 
 	async function getStreams() {
