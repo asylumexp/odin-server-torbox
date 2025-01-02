@@ -3,11 +3,11 @@
 		<div class="navbar-start">
 			<img src="/logo.svg" alt="logo" class="w-16" />
 			<form class="join" action="/search" method="GET">
-				<input type="text" name="q" placeholder="Search movies or tv shows ..." class="ml-5 input input-sm input-bordered w-64 join-item placeholder-slate-600" />
+				<input type="text" name="q" placeholder="Search ..." class="ml-5 input input-sm input-bordered w-32 join-item placeholder-slate-600" />
 				<button type="submit" class="join-item btn btn-sm input-bordered"><FaIcon icon="search" /></button>
 			</form>
 		</div>
-		<div class="navbar-center hidden lg:flex">
+		<div class="navbar-center lg:flex">
 			<ul class="menu menu-horizontal px-1">
 				<li>
 					<NuxtLink to="/"><FaIcon icon="fa-home" />Home</NuxtLink>
