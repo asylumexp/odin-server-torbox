@@ -31,7 +31,7 @@ func New(app *pocketbase.PocketBase, settings *settings.Settings) *RealDebrid {
 
 func (rd *RealDebrid) RemoveByType(t string) {
 	var res interface{}
-	headers, _ := rd.CallEndpoint(fmt.Sprintf("/%s/?limit=1", t), "GET", nil, &res)
+	headers, _ := rd.CallEndpoint(fmt.Sprintf("/%s/?limit=1", t), "GET", nil, &res, false)
 	if res == nil {
 		return
 	}
@@ -46,13 +46,14 @@ func (rd *RealDebrid) RemoveByType(t string) {
 
 	for count > 0 {
 
-		rd.CallEndpoint(fmt.Sprintf("/%s/?limit=200", t), "GET", nil, &res)
+		rd.CallEndpoint(fmt.Sprintf("/%s/?limit=200", t), "GET", nil, &res, false)
 		for _, v := range res.([]any) {
 			rd.CallEndpoint(
 				fmt.Sprintf("/%s/delete/%s", t, v.(map[string]any)["id"].(string), nil),
 				"DELETE",
 				nil,
 				nil,
+				false,
 			)
 		}
 		count -= 200
@@ -102,7 +103,8 @@ func (rd *RealDebrid) CallEndpoint(
 	endpoint string,
 	method string,
 	body map[string]string,
-	data interface{},
+	data any,
+	isAuth bool,
 ) (http.Header, int) {
 	request := resty.New().
 		SetRetryCount(3).
@@ -115,12 +117,13 @@ func (rd *RealDebrid) CallEndpoint(
 	var respHeaders http.Header
 	status := 200
 
-	if body != nil {
-		request.SetFormData(body)
-	}
+	request.SetFormData(body)
 
-	rdsets := rd.settings.GetRealDebrid()
-	request.SetHeader("Authorization", "Bearer "+rdsets.AccessToken)
+	if !isAuth {
+
+		rdsets := rd.settings.GetRealDebrid()
+		request.SetHeader("Authorization", "Bearer "+rdsets.AccessToken)
+	}
 
 	request.Attempt = 3
 
@@ -139,7 +142,12 @@ func (rd *RealDebrid) CallEndpoint(
 
 	}
 
-	resp, err := r("https://api.real-debrid.com/rest/1.0" + endpoint)
+	host := "https://api.real-debrid.com/rest/1.0"
+	if isAuth {
+		host = "https://api.real-debrid.com/oauth/v2"
+	}
+
+	resp, err := r(host + endpoint)
 	if err == nil {
 		respHeaders = resp.Header()
 		status = resp.StatusCode()
@@ -186,7 +194,7 @@ func (rd *RealDebrid) Unrestrict(m string) []types.Unrestricted {
 	rd.CallEndpoint("/torrents/addMagnet", "POST", map[string]string{
 		"host":   "real-debrid.com",
 		"magnet": m,
-	}, &magnet)
+	}, &magnet, false)
 
 	if magnet.Id == "" {
 		return nil
@@ -197,14 +205,15 @@ func (rd *RealDebrid) Unrestrict(m string) []types.Unrestricted {
 		"DELETE",
 		nil,
 		nil,
+		false,
 	)
 
 	rd.CallEndpoint("/torrents/selectFiles/"+magnet.Id, "POST", map[string]string{
 		"files": "all",
-	}, nil)
+	}, nil, false)
 
 	info := Info{}
-	rd.CallEndpoint("/torrents/info/"+magnet.Id, "GET", nil, &info)
+	rd.CallEndpoint("/torrents/info/"+magnet.Id, "GET", nil, &info, false)
 
 	if len(info.Links) == 0 {
 		return nil
@@ -216,7 +225,7 @@ func (rd *RealDebrid) Unrestrict(m string) []types.Unrestricted {
 		u := Link{}
 		rd.CallEndpoint("/unrestrict/link", "POST", map[string]string{
 			"link": v,
-		}, &u)
+		}, &u, false)
 		if u.Filename == "" {
 			continue
 		}

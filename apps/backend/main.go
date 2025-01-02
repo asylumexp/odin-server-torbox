@@ -79,7 +79,7 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	conf := pocketbase.Config{DefaultDev: false}
+	conf := pocketbase.Config{DefaultDev: true}
 	app := pocketbase.NewWithConfig(conf)
 	migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 		Automigrate: true,
@@ -257,7 +257,29 @@ func main() {
 		e.Router.Any("/-/realdebrid/*", func(c echo.Context) error {
 			url := strings.ReplaceAll(c.Request().URL.String(), "/-/realdebrid", "")
 			var result interface{}
-			headers, status := realdebrid.CallEndpoint(url, c.Request().Method, nil, &result)
+			var headers http.Header
+			isAuth := false
+			status := 0
+			if strings.Contains(url, "/isAuth") {
+				url = strings.ReplaceAll(url, "/isAuth", "")
+				isAuth = true
+			}
+
+			data := apis.RequestInfo(c).Data
+
+			var body map[string]string
+			if data != nil {
+				jm, err := json.Marshal(data)
+				log.Debug(string(jm))
+				if err == nil {
+					err := json.Unmarshal(jm, &body)
+					if err != nil {
+						log.Warn(body)
+					}
+				}
+			}
+
+			headers, status = realdebrid.CallEndpoint(url, c.Request().Method, body, &result, isAuth)
 
 			for k, v := range headers {
 				if funk.Contains([]string{
@@ -303,7 +325,7 @@ func main() {
 				return c.String(http.StatusOK, "pong")
 			}
 			var rd any
-			realdebrid.CallEndpoint("/user", "GET", nil, &rd)
+			realdebrid.CallEndpoint("/user", "GET", nil, &rd, false)
 			var ad any
 			alldebrid.CallEndpoint("/user", "GET", nil, &ad)
 			tr, _, _ := trakt.CallEndpoint("/users/settings", "GET", nil, false)

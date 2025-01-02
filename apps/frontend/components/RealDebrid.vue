@@ -45,34 +45,36 @@
 	const device_code = ref<string>()
 	async function realDebridLogin() {
 		login_dialog.value?.showModal()
-		const res = await useFetch(`${host}/device/code?client_id=X245A4XAIBGVM&=new_credentials=yes`)
-		const data = res.data.value as any
+		const data = await usePb().send(`/-/realdebrid/isAuth/device/code?client_id=X245A4XAIBGVM&=new_credentials=yes`, { method: 'get', cache: 'no-cache' })
 		url.value = data.verification_url
 		user_code.value = data.user_code
 		device_code.value = data.device_code
 
 		const poll = setInterval(async () => {
-			const res2 = await useFetch(`${host}/device/credentials?client_id=X245A4XAIBGVM&code=${device_code.value}`, { method: 'get', cache: 'no-cache' })
-			if (res2.data.value !== null) {
+			const data2 = await usePb().send(`/-/realdebrid/isAuth/device/credentials?client_id=X245A4XAIBGVM&code=${device_code.value}`, { method: 'get', cache: 'no-cache' })
+			console.log(data2)
+			if (data2 !== null) {
 				clearInterval(poll)
-				const data = res2.data.value as any
 				const formData = new FormData()
-				formData.append('client_id', data.client_id)
-				formData.append('client_secret', data.client_secret)
+				formData.append('client_id', data2.client_id)
+				formData.append('client_secret', data2.client_secret)
 				formData.append('code', device_code.value || '')
 				formData.append('grant_type', 'http://oauth.net/grant_type/device/1.0')
 
-				const res3 = await useFetch(`${host}/token`, {
+				console.log(formData)
+
+				const data3 = await usePb().send(`/-/realdebrid/isAuth/token`, {
 					method: 'post',
 					cache: 'no-cache',
-					body: formData,
+					body: { client_id: data2.client_id, client_secret: data2.client_secret, code: device_code.value, grant_type: 'http://oauth.net/grant_type/device/1.0' },
 				})
-				if (res3.data.value !== null) {
+				if (data3 !== null) {
 					emit('success', {
-						...res3.data.value,
-						...res2.data.value,
+						...data3,
+						...data2,
 					})
 					login_dialog.value?.close()
+					profile.value = await usePb().send('/-/realdebrid/user', { method: 'get' })
 				}
 			}
 		}, 5000)
