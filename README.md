@@ -63,6 +63,8 @@ services:
   jackett:
     image: lscr.io/linuxserver/jackett:latest
     container_name: jackett
+    ports:
+      - 9117:9117
     environment:
       - TZ=Etc/UTC
       - AUTO_UPDATE=true
