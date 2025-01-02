@@ -54,6 +54,8 @@ services:
       - TMDB_KEY=<tmdbkey>
       - TRAKT_CLIENTID=<trakt_clientid>
       - TRAKT_SECRET=<trakt_secret>
+      - ADMIN_EMAIL=<user> #optional
+      - ADMIN_PASSWORD=<password> #optional
       - ALLDEBRID_KEY=<alldebrid_key> # if you have an AllDebrid account
     volumes:
       - ./pb_data:/pb_data
